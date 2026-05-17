@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="チャイムまでに帰れ！">
+  <rect width="64" height="64" rx="8" fill="#25364a"/>
+  <rect x="10" y="36" width="44" height="16" fill="#e9cd8d" stroke="#fff0b5" stroke-width="3"/>
+  <rect x="12" y="14" width="40" height="24" fill="#f7f0dc" stroke="#5c4a32" stroke-width="3"/>
+  <rect x="19" y="22" width="8" height="8" fill="#9bdaf1"/>
+  <rect x="37" y="22" width="8" height="8" fill="#9bdaf1"/>
+  <rect x="28" y="34" width="8" height="18" fill="#8b4f22"/>
+  <circle cx="50" cy="13" r="6" fill="#ffe66d"/>
+  <path d="M48 20h4l-2 7z" fill="#ffe66d"/>
+</svg>
