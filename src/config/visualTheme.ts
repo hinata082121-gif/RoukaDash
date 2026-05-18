@@ -55,13 +55,17 @@ export const THEME = {
 
 export const SIDE_VISUAL = {
   playerLaneY: 618,
+  classroomY: 160,
+  classroomHeight: 204,
+  classroomWindowY: 58,
+  classroomWindowHeight: 94,
   hallwayBackY: 430,
   floorTopY: 470,
-  floorBottomY: 696,
-  playerScale: 1.32,
-  teacherScaleHallway: 1.34,
-  teacherScaleClassroom: 1.04,
-  studentScaleHallway: 1.16,
-  studentScaleClassroomStanding: 0.94,
-  studentScaleClassroomSitting: 0.84
+  floorBottomY: 684,
+  playerScale: 1.46,
+  teacherScaleHallway: 1.48,
+  teacherScaleClassroom: 1.14,
+  studentScaleHallway: 1.26,
+  studentScaleClassroomStanding: 1.02,
+  studentScaleClassroomSitting: 0.92
 };

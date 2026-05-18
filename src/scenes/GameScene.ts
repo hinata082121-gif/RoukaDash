@@ -526,10 +526,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createSideTeacher(config: SideScrollTeacherConfig, side: SideScrollConfig): SideTeacherRuntime {
-    const y = config.type === 'classroom_watch' ? side.floorY - 214 : side.floorY - 22;
+    const classroomPeekY = SIDE_VISUAL.classroomY + SIDE_VISUAL.classroomWindowY + SIDE_VISUAL.classroomWindowHeight - 8;
+    const y = config.type === 'classroom_watch' ? classroomPeekY : side.floorY - 22;
     const visualScale = config.type === 'classroom_watch' ? SIDE_VISUAL.teacherScaleClassroom : SIDE_VISUAL.teacherScaleHallway;
     const body = this.add.container(config.x, y).setDepth(config.type === 'classroom_watch' ? 28 : 45);
-    const shadow = this.add.ellipse(0, 21, 34, 11, 0x000000, 0.2);
+    const shadow = this.add.ellipse(0, 21, 34, 11, 0x000000, config.type === 'classroom_watch' ? 0.08 : 0.2);
     const suit = this.add.rectangle(0, 4, 28, 40, THEME.colors.teacherSuit, 1).setStrokeStyle(3, 0xffffff, 0.75);
     const shirt = this.add.rectangle(0, -3, 12, 16, 0xf8fafc, 0.92);
     const tie = this.add.triangle(0, 7, 0, -5, -6, 11, 6, 11, 0x1e3a8a, 0.9);
@@ -580,7 +581,15 @@ export class GameScene extends Phaser.Scene {
         teacher.body.setAlpha(0.35);
         continue;
       }
-      teacher.body.setAlpha(1);
+      if (teacher.config.type === 'classroom_watch') {
+        const baseY = SIDE_VISUAL.classroomY + SIDE_VISUAL.classroomWindowY + SIDE_VISUAL.classroomWindowHeight - 8;
+        const isWatching = teacher.state === 'watching';
+        const isWarning = teacher.state === 'warning';
+        teacher.body.setY(baseY + (teacher.state === 'hidden' ? 22 : isWarning ? 9 : 0));
+        teacher.body.setAlpha(isWatching ? 1 : isWarning ? 0.7 : 0.04);
+      } else {
+        teacher.body.setAlpha(1);
+      }
       if (teacher.warningVision) this.drawSideVision(teacher.vision, teacher.warningVision, THEME.colors.warningVision, 0.38);
       if (teacher.activeVision) this.drawSideVision(teacher.vision, teacher.activeVision, THEME.colors.dangerVision, 0.44);
     }

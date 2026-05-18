@@ -11,8 +11,10 @@ export class SideScrollRenderer {
     renderer.render();
   }
 
-  private readonly roomY = 150;
-  private readonly roomHeight = 284;
+  private readonly roomY = SIDE_VISUAL.classroomY;
+  private readonly roomHeight = SIDE_VISUAL.classroomHeight;
+  private readonly windowOffsetY = SIDE_VISUAL.classroomWindowY;
+  private readonly windowHeight = SIDE_VISUAL.classroomWindowHeight;
   private readonly floorTopY = SIDE_VISUAL.floorTopY;
   private readonly floorBottomY = SIDE_VISUAL.floorBottomY;
   private readonly hallwayBackY = SIDE_VISUAL.hallwayBackY;
@@ -21,6 +23,7 @@ export class SideScrollRenderer {
 
   private render(): void {
     const g = this.scene.add.graphics().setDepth(1);
+    const windowG = this.scene.add.graphics().setDepth(30);
     this.drawBackgroundWall(g);
     for (const room of this.side.backgroundRooms) {
       this.drawClassroomBack(g, room);
@@ -29,7 +32,7 @@ export class SideScrollRenderer {
       this.drawClassroomMid(g, room);
     }
     for (const room of this.side.backgroundRooms) {
-      this.drawWindowFront(g, room);
+      this.drawWindowFront(windowG, room);
     }
     this.drawCorridorBack(g);
     this.drawFloor(g);
@@ -70,13 +73,16 @@ export class SideScrollRenderer {
     const height = this.roomHeight;
     g.fillStyle(palette.wall, 1);
     g.fillRect(x, y, width, height);
-    g.lineStyle(4, THEME.colors.mapBorder, 1);
-    g.strokeRect(x, y, width, height);
+    g.lineStyle(3, THEME.colors.mapBorder, 0.48);
+    g.lineBetween(x, y, x + width, y);
+    g.lineBetween(x, y + height, x + width, y + height);
+    g.lineStyle(2, 0xffffff, 0.32);
+    g.lineBetween(x + 4, y + 5, x + width - 4, y + 5);
 
     g.fillStyle(palette.floor, 1);
-    g.fillRect(x + 8, y + 164, width - 16, height - 172);
+    g.fillRect(x + 8, y + 128, width - 16, height - 136);
     g.lineStyle(2, 0xb58e5f, 0.28);
-    for (let floorLineY = y + 190; floorLineY < y + height - 10; floorLineY += 30) {
+    for (let floorLineY = y + 148; floorLineY < y + height - 10; floorLineY += 24) {
       g.lineBetween(x + 10, floorLineY, x + width - 10, floorLineY);
     }
 
@@ -92,33 +98,33 @@ export class SideScrollRenderer {
 
     if (kind === 'science') {
       this.drawExperimentTables(g, x, y, width);
-      this.drawStandingStudent(g, x + 74, y + 196, 0x8dd7c7, 0.78);
-      this.drawTeacherSilhouette(g, x + width - 92, y + 194, 0xf7f7f7);
+      this.drawStandingStudent(g, x + 74, y + 154, 0x8dd7c7, 0.78);
+      this.drawTeacherSilhouette(g, x + width - 92, y + 156, 0xf7f7f7);
     } else if (kind === 'music') {
-      this.drawPiano(g, x + 26, y + 184);
-      this.drawMusicStands(g, x + 112, y + 176);
-      this.drawSeatedStudent(g, x + 142, y + 214, 0x71c562);
+      this.drawPiano(g, x + 26, y + 148);
+      this.drawMusicStands(g, x + 112, y + 140);
+      this.drawSeatedStudent(g, x + 142, y + 170, 0x71c562);
     } else if (kind === 'library') {
-      this.drawReadingTable(g, x + 42, y + 196, width - 112);
-      this.drawSeatedStudent(g, x + 78, y + 208, 0x4f9ad8);
-      this.drawSeatedStudent(g, x + 132, y + 208, 0xf59e0b);
+      this.drawReadingTable(g, x + 42, y + 160, width - 112);
+      this.drawSeatedStudent(g, x + 78, y + 174, 0x4f9ad8);
+      this.drawSeatedStudent(g, x + 132, y + 174, 0xf59e0b);
     } else if (kind === 'nurse') {
-      this.drawNurseBed(g, x + 24, y + 190);
-      this.drawTeacherSilhouette(g, x + width - 80, y + 200, 0xffffff);
+      this.drawNurseBed(g, x + 24, y + 154);
+      this.drawTeacherSilhouette(g, x + width - 80, y + 162, 0xffffff);
     } else if (kind === 'staff') {
       for (let deskX = x + 22; deskX < x + width - 82; deskX += 42) {
-        this.drawOfficeDesk(g, deskX, y + 184);
+        this.drawOfficeDesk(g, deskX, y + 150);
       }
-      this.drawTeacherSilhouette(g, x + 74, y + 208, THEME.colors.teacherSuit);
-      this.drawTeacherSilhouette(g, x + width - 96, y + 208, THEME.colors.teacherSuit);
+      this.drawTeacherSilhouette(g, x + 74, y + 172, THEME.colors.teacherSuit);
+      this.drawTeacherSilhouette(g, x + width - 96, y + 172, THEME.colors.teacherSuit);
     } else if (kind === 'storage' || room.label.includes('玄関') || room.label.includes('下駄箱')) {
-      this.drawShoeBoxes(g, x + 26, y + 172, Math.max(4, Math.floor((width - 70) / 24)));
+      this.drawShoeBoxes(g, x + 26, y + 126, Math.max(4, Math.floor((width - 70) / 24)));
     } else {
       this.drawClassroomDesks(g, x, y, width);
-      this.drawSeatedStudent(g, x + 58, y + 204, 0x4f9ad8);
-      if (width > 175) this.drawSeatedStudent(g, x + 110, y + 204, 0xf59e0b);
-      if (width > 205) this.drawStandingStudent(g, x + 148, y + 196, 0x71c562, 0.78);
-      this.drawTeacherDesk(g, x + width - 92, y + 178);
+      this.drawSeatedStudent(g, x + 58, y + 168, 0x4f9ad8);
+      if (width > 175) this.drawSeatedStudent(g, x + 110, y + 168, 0xf59e0b);
+      if (width > 205) this.drawStandingStudent(g, x + 148, y + 158, 0x71c562, 0.78);
+      this.drawTeacherDesk(g, x + width - 92, y + 142);
     }
   }
 
@@ -130,31 +136,33 @@ export class SideScrollRenderer {
     const doorX = x + width - 44;
 
     g.fillStyle(THEME.colors.door, 1);
-    g.fillRect(doorX, y + height - 100, 34, 100);
+    g.fillRect(doorX, y + 78, 34, 126);
     g.lineStyle(4, THEME.colors.doorDark, 0.85);
-    g.strokeRect(doorX, y + height - 100, 34, 100);
+    g.strokeRect(doorX, y + 78, 34, 126);
     g.fillStyle(THEME.colors.windowLight, 0.78);
-    g.fillRect(doorX + 7, y + height - 86, 18, 22);
+    g.fillRect(doorX + 7, y + 94, 18, 26);
     g.fillStyle(0x3b2314, 1);
-    g.fillRect(doorX + 25, y + height - 48, 4, 4);
+    g.fillRect(doorX + 25, y + 146, 4, 4);
 
-    const visibleWidth = Math.max(58, width - 74);
+    const visibleWidth = Math.max(84, width - 74);
     g.fillStyle(0xb9dbe7, 0.26);
-    g.fillRect(x + 18, y + 82, visibleWidth, 126);
+    g.fillRect(x + 18, y + this.windowOffsetY, visibleWidth, this.windowHeight);
     g.lineStyle(4, 0x35505a, 0.88);
-    g.strokeRect(x + 18, y + 82, visibleWidth, 126);
+    g.strokeRect(x + 18, y + this.windowOffsetY, visibleWidth, this.windowHeight);
     g.lineStyle(3, 0x35505a, 0.78);
-    g.lineBetween(x + 18, y + 144, x + visibleWidth + 18, y + 144);
+    g.lineBetween(x + 18, y + this.windowOffsetY + this.windowHeight / 2, x + visibleWidth + 18, y + this.windowOffsetY + this.windowHeight / 2);
     for (let sashX = x + 66; sashX < x + visibleWidth + 8; sashX += 48) {
-      g.lineBetween(sashX, y + 84, sashX, y + 206);
+      g.lineBetween(sashX, y + this.windowOffsetY + 2, sashX, y + this.windowOffsetY + this.windowHeight - 2);
     }
 
     g.fillStyle(THEME.colors.curtain, 0.9);
-    g.fillRect(x + 20, y + 78, 10, 134);
-    g.fillRect(x + visibleWidth + 6, y + 78, 10, 134);
+    g.fillRect(x + 20, y + this.windowOffsetY - 4, 10, this.windowHeight + 10);
+    g.fillRect(x + visibleWidth + 6, y + this.windowOffsetY - 4, 10, this.windowHeight + 10);
     g.fillStyle(0xe8fbff, 0.62);
-    g.fillTriangle(x + 34, y + 92, x + 92, y + 92, x + 34, y + 132);
-    g.fillTriangle(x + 76, y + 164, x + 128, y + 164, x + 76, y + 196);
+    g.fillTriangle(x + 34, y + this.windowOffsetY + 10, x + 92, y + this.windowOffsetY + 10, x + 34, y + this.windowOffsetY + 42);
+    g.fillTriangle(x + 76, y + this.windowOffsetY + 58, x + 128, y + this.windowOffsetY + 58, x + 76, y + this.windowOffsetY + 86);
+    g.fillStyle(0x2f2418, 0.18);
+    g.fillRect(x + 18, y + this.windowOffsetY + this.windowHeight - 8, visibleWidth, 8);
   }
 
   private drawCorridorBack(g: Phaser.GameObjects.Graphics): void {
@@ -263,20 +271,20 @@ export class SideScrollRenderer {
   private drawBackWallFeature(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number, kind: RoomKind): void {
     if (kind === 'library') {
       for (let shelfX = x + 18; shelfX < x + width - 52; shelfX += 34) {
-        this.drawBookShelf(g, shelfX, y + 28, 28, 84);
+        this.drawBookShelf(g, shelfX, y + 24, 28, 70);
       }
       return;
     }
     if (kind === 'music') {
       g.fillStyle(0xfff7d6, 1);
-      g.fillRect(x + 22, y + 32, 54, 42);
-      this.drawMusicNote(g, x + 36, y + 42);
-      this.drawMusicNote(g, x + 60, y + 54);
+      g.fillRect(x + 22, y + 28, 54, 36);
+      this.drawMusicNote(g, x + 36, y + 36);
+      this.drawMusicNote(g, x + 60, y + 48);
       return;
     }
     if (kind === 'nurse') {
       g.fillStyle(0xffffff, 0.95);
-      g.fillRect(x + 22, y + 28, width - 92, height - 96);
+      g.fillRect(x + 22, y + 26, width - 92, height - 76);
       g.fillStyle(0xef4444, 1);
       g.fillRect(x + 54, y + 46, 10, 34);
       g.fillRect(x + 42, y + 58, 34, 10);
@@ -284,7 +292,7 @@ export class SideScrollRenderer {
     }
     if (kind === 'science') {
       g.fillStyle(THEME.colors.locker, 1);
-      g.fillRect(x + 20, y + 26, width - 92, 68);
+      g.fillRect(x + 20, y + 24, width - 92, 58);
       g.fillStyle(0x9bdaf1, 1);
       for (let bottleX = x + 30; bottleX < x + width - 102; bottleX += 24) {
         g.fillRect(bottleX, y + 48, 10, 24);
@@ -294,22 +302,22 @@ export class SideScrollRenderer {
     }
     if (kind === 'staff') {
       g.fillStyle(THEME.colors.locker, 1);
-      g.fillRect(x + 18, y + 24, width - 84, 88);
+      g.fillRect(x + 18, y + 22, width - 84, 70);
       g.lineStyle(2, 0x35505a, 0.7);
-      for (let lineX = x + 44; lineX < x + width - 90; lineX += 26) g.lineBetween(lineX, y + 28, lineX, y + 108);
+      for (let lineX = x + 44; lineX < x + width - 90; lineX += 26) g.lineBetween(lineX, y + 26, lineX, y + 88);
       return;
     }
     if (kind === 'storage') {
-      this.drawShoeBoxes(g, x + 24, y + 34, Math.max(4, Math.floor((width - 90) / 24)));
+      this.drawShoeBoxes(g, x + 24, y + 28, Math.max(4, Math.floor((width - 90) / 24)));
       return;
     }
 
     g.fillStyle(THEME.colors.chalkboard, 1);
-    g.fillRect(x + 24, y + 26, width - 94, 48);
+    g.fillRect(x + 24, y + 24, width - 94, 42);
     g.lineStyle(3, 0x214d37, 1);
-    g.strokeRect(x + 24, y + 26, width - 94, 48);
+    g.strokeRect(x + 24, y + 24, width - 94, 42);
     g.fillStyle(0xfff7d6, 0.9);
-    g.fillRect(x + 34, y + 56, 34, 4);
+    g.fillRect(x + 34, y + 52, 34, 4);
     g.fillStyle(0xf87171, 0.85);
     g.fillRect(x + width - 130, y + 34, 18, 18);
     g.fillStyle(THEME.colors.paper, 0.9);
@@ -319,7 +327,7 @@ export class SideScrollRenderer {
   private drawClassroomDesks(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number): void {
     for (let row = 0; row < 2; row += 1) {
       for (let deskX = x + 28; deskX < x + width - 84; deskX += 46) {
-        const deskY = y + 174 + row * 38;
+        const deskY = y + 136 + row * 30;
         g.fillStyle(0x7c4a24, 0.95);
         g.fillRect(deskX, deskY + 12, 30, 8);
         g.fillStyle(0xa86934, 1);
@@ -331,10 +339,10 @@ export class SideScrollRenderer {
   private drawExperimentTables(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number): void {
     for (let tableX = x + 28; tableX < x + width - 92; tableX += 70) {
       g.fillStyle(0x177f78, 1);
-      g.fillRect(tableX, y + 178, 54, 24);
+      g.fillRect(tableX, y + 142, 54, 24);
       g.fillStyle(0xe8fbff, 0.92);
-      g.fillTriangle(tableX + 12, y + 160, tableX + 4, y + 188, tableX + 22, y + 188);
-      g.fillRect(tableX + 34, y + 164, 12, 26);
+      g.fillTriangle(tableX + 12, y + 126, tableX + 4, y + 154, tableX + 22, y + 154);
+      g.fillRect(tableX + 34, y + 130, 12, 26);
     }
   }
 

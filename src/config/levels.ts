@@ -199,49 +199,49 @@ const level5Map: LevelMapConfig = {
 };
 
 const sideLevel1: SideScrollConfig = {
-  worldWidth: 980,
+  worldWidth: 1060,
   floorY: SIDE_VISUAL.playerLaneY,
   startX: 82,
-  goalX: 900,
+  goalX: 960,
   initialFloor: 1,
   goalFloor: 1,
   backgroundRooms: [
-    { x: 80, width: 190, floor: 1, label: '1-1', kind: 'classroom' },
-    { x: 320, width: 190, floor: 1, label: '1-2', kind: 'classroom' },
-    { x: 610, width: 210, floor: 1, label: '玄関', kind: 'storage' }
+    { x: 70, width: 250, floor: 1, label: '1-1', kind: 'classroom' },
+    { x: 355, width: 250, floor: 1, label: '1-2', kind: 'classroom' },
+    { x: 750, width: 245, floor: 1, label: '玄関', kind: 'storage' }
   ],
   students: [
     { id: 'l1-s1', x: 250, floor: 1, layer: 'hallway', color: 0x4f9ad8 },
     { id: 'l1-s2', x: 460, floor: 1, layer: 'classroom', color: 0x71c562 },
-    { id: 'l1-s3', x: 730, floor: 1, layer: 'hallway', color: 0xf59e0b }
+    { id: 'l1-s3', x: 790, floor: 1, layer: 'hallway', color: 0xf59e0b }
   ],
   teachers: [
     {
       id: 'l1-watch',
       type: 'classroom_watch',
-      x: 520,
+      x: 470,
       floor: 1,
       direction: 'right',
-      visionWidth: 155,
+      visionWidth: 176,
       visionHeight: 86,
-      hiddenMs: 2200,
-      warningMs: 1000,
-      watchingMs: 1650
+      hiddenMs: 1900,
+      warningMs: 850,
+      watchingMs: 1750
     }
   ]
 };
 
 const sideLevel2: SideScrollConfig = {
-  worldWidth: 1180,
+  worldWidth: 1240,
   floorY: SIDE_VISUAL.playerLaneY,
   startX: 82,
-  goalX: 1080,
+  goalX: 1140,
   initialFloor: 2,
   goalFloor: 2,
   backgroundRooms: [
-    { x: 70, width: 220, floor: 2, label: '理科室', kind: 'science' },
-    { x: 360, width: 190, floor: 2, label: '準備室', kind: 'storage' },
-    { x: 660, width: 220, floor: 2, label: '2-1', kind: 'classroom' }
+    { x: 60, width: 270, floor: 2, label: '理科室', kind: 'science' },
+    { x: 375, width: 220, floor: 2, label: '準備室', kind: 'storage' },
+    { x: 675, width: 260, floor: 2, label: '2-1', kind: 'classroom' }
   ],
   students: [
     { id: 'l2-s1', x: 210, floor: 2, layer: 'classroom', color: 0x71c562 },
@@ -255,26 +255,26 @@ const sideLevel2: SideScrollConfig = {
       x: 520,
       floor: 2,
       direction: 'right',
-      visionWidth: 165,
+      visionWidth: 188,
       visionHeight: 82,
       patrolMinX: 420,
       patrolMaxX: 720,
-      speed: 58
+      speed: 68
     }
   ]
 };
 
 const sideLevel3: SideScrollConfig = {
-  worldWidth: 1360,
+  worldWidth: 1420,
   floorY: SIDE_VISUAL.playerLaneY,
   startX: 84,
-  goalX: 1250,
+  goalX: 1320,
   initialFloor: 1,
   goalFloor: 1,
   backgroundRooms: [
-    { x: 80, width: 210, floor: 1, label: '保健室', kind: 'nurse' },
-    { x: 380, width: 190, floor: 1, label: '下駄箱', kind: 'storage' },
-    { x: 720, width: 220, floor: 1, label: '1-1', kind: 'classroom' }
+    { x: 70, width: 250, floor: 1, label: '保健室', kind: 'nurse' },
+    { x: 390, width: 220, floor: 1, label: '下駄箱', kind: 'storage' },
+    { x: 730, width: 270, floor: 1, label: '1-1', kind: 'classroom' }
   ],
   students: [
     { id: 'l3-s1', x: 310, floor: 1, layer: 'hallway', color: 0x4f9ad8 },
@@ -288,11 +288,11 @@ const sideLevel3: SideScrollConfig = {
       x: 460,
       floor: 1,
       direction: 'right',
-      visionWidth: 155,
+      visionWidth: 180,
       visionHeight: 82,
       patrolMinX: 360,
       patrolMaxX: 620,
-      speed: 56
+      speed: 65
     },
     {
       id: 'l3-watch',
@@ -300,11 +300,11 @@ const sideLevel3: SideScrollConfig = {
       x: 900,
       floor: 1,
       direction: 'left',
-      visionWidth: 170,
+      visionWidth: 192,
       visionHeight: 86,
-      hiddenMs: 2100,
-      warningMs: 950,
-      watchingMs: 1650
+      hiddenMs: 1800,
+      warningMs: 820,
+      watchingMs: 1800
     }
   ]
 };
@@ -317,10 +317,10 @@ const sideLevel4: SideScrollConfig = {
   initialFloor: 3,
   goalFloor: 2,
   backgroundRooms: [
-    { x: 80, width: 220, floor: 3, label: '図書室', kind: 'library' },
-    { x: 360, width: 190, floor: 3, label: '3-1', kind: 'classroom' },
-    { x: 940, width: 220, floor: 2, label: '職員室', kind: 'staff' },
-    { x: 1210, width: 180, floor: 2, label: '2-1', kind: 'classroom' }
+    { x: 70, width: 270, floor: 3, label: '図書室', kind: 'library' },
+    { x: 385, width: 235, floor: 3, label: '3-1', kind: 'classroom' },
+    { x: 930, width: 275, floor: 2, label: '職員室', kind: 'staff' },
+    { x: 1240, width: 230, floor: 2, label: '2-1', kind: 'classroom' }
   ],
   students: [
     { id: 'l4-s1', x: 250, floor: 3, layer: 'classroom', color: 0x4f9ad8 },
@@ -334,11 +334,11 @@ const sideLevel4: SideScrollConfig = {
       x: 430,
       floor: 3,
       direction: 'right',
-      visionWidth: 155,
+      visionWidth: 180,
       visionHeight: 82,
       patrolMinX: 320,
       patrolMaxX: 600,
-      speed: 58
+      speed: 66
     },
     {
       id: 'l4-patrol-2f',
@@ -346,11 +346,11 @@ const sideLevel4: SideScrollConfig = {
       x: 1120,
       floor: 2,
       direction: 'left',
-      visionWidth: 160,
+      visionWidth: 186,
       visionHeight: 82,
       patrolMinX: 1000,
       patrolMaxX: 1330,
-      speed: 60
+      speed: 68
     }
   ],
   stairTransitions: [
@@ -373,12 +373,12 @@ const sideLevel5: SideScrollConfig = {
   initialFloor: 3,
   goalFloor: 1,
   backgroundRooms: [
-    { x: 80, width: 220, floor: 3, label: '音楽室', kind: 'music' },
-    { x: 380, width: 190, floor: 3, label: '3-1', kind: 'classroom' },
-    { x: 820, width: 210, floor: 2, label: '2-1', kind: 'classroom' },
-    { x: 1160, width: 220, floor: 2, label: '職員室', kind: 'staff' },
-    { x: 1580, width: 210, floor: 1, label: '1-1', kind: 'classroom' },
-    { x: 1840, width: 220, floor: 1, label: '玄関', kind: 'storage' }
+    { x: 70, width: 270, floor: 3, label: '音楽室', kind: 'music' },
+    { x: 385, width: 235, floor: 3, label: '3-1', kind: 'classroom' },
+    { x: 800, width: 265, floor: 2, label: '2-1', kind: 'classroom' },
+    { x: 1140, width: 280, floor: 2, label: '職員室', kind: 'staff' },
+    { x: 1540, width: 260, floor: 1, label: '1-1', kind: 'classroom' },
+    { x: 1830, width: 260, floor: 1, label: '玄関', kind: 'storage' }
   ],
   students: [
     { id: 'l5-s1', x: 260, floor: 3, layer: 'classroom', color: 0xf59e0b },
@@ -391,14 +391,14 @@ const sideLevel5: SideScrollConfig = {
     {
       id: 'l5-watch-3f',
       type: 'classroom_watch',
-      x: 430,
+      x: 260,
       floor: 3,
       direction: 'right',
-      visionWidth: 160,
+      visionWidth: 184,
       visionHeight: 86,
-      hiddenMs: 2000,
-      warningMs: 900,
-      watchingMs: 1600
+      hiddenMs: 1700,
+      warningMs: 780,
+      watchingMs: 1780
     },
     {
       id: 'l5-patrol-2f',
@@ -406,11 +406,11 @@ const sideLevel5: SideScrollConfig = {
       x: 1060,
       floor: 2,
       direction: 'right',
-      visionWidth: 160,
+      visionWidth: 188,
       visionHeight: 82,
       patrolMinX: 920,
       patrolMaxX: 1240,
-      speed: 62
+      speed: 70
     },
     {
       id: 'l5-static-1f',
@@ -418,7 +418,7 @@ const sideLevel5: SideScrollConfig = {
       x: 1680,
       floor: 1,
       direction: 'left',
-      visionWidth: 165,
+      visionWidth: 192,
       visionHeight: 82
     },
     {
@@ -427,11 +427,11 @@ const sideLevel5: SideScrollConfig = {
       x: 1880,
       floor: 1,
       direction: 'left',
-      visionWidth: 155,
+      visionWidth: 178,
       visionHeight: 86,
-      hiddenMs: 2300,
-      warningMs: 900,
-      watchingMs: 1550
+      hiddenMs: 1900,
+      warningMs: 800,
+      watchingMs: 1720
     }
   ],
   stairTransitions: [
@@ -460,9 +460,9 @@ export const levels: LevelConfig[] = [
     name: '1階教室前から玄関ホールへ',
     startLabel: '1階教室前の廊下',
     goalLabel: '玄関ホール',
-    timeLimit: 19,
+    timeLimit: 15,
     objective: '基本ルールのチュートリアル',
-    expectedClearTime: '13〜17秒',
+    expectedClearTime: '11〜14秒',
     playerStart: { x: 196, y: 608 },
     goal: { x: 168, y: 144, width: 56, height: 48 },
     map: level1Map,
@@ -485,10 +485,10 @@ export const levels: LevelConfig[] = [
     name: '理科室前から2年教室前へ',
     startLabel: '2階理科室前の廊下',
     goalLabel: '2年教室前',
-    timeLimit: 23,
+    timeLimit: 19,
     objective: '巡回教師を避ける',
     introText: '巡回する先生に注意！',
-    expectedClearTime: '16〜21秒',
+    expectedClearTime: '14〜18秒',
     playerStart: { x: 112, y: 192 },
     goal: { x: 248, y: 424, width: 52, height: 40 },
     map: level2Map,
@@ -513,10 +513,10 @@ export const levels: LevelConfig[] = [
     name: '保健室前から1年教室前へ',
     startLabel: '保健室前の廊下',
     goalLabel: '1年教室前',
-    timeLimit: 28,
+    timeLimit: 23,
     objective: '待機とルート判断を学ぶ',
     introText: '安全な場所で待とう',
-    expectedClearTime: '20〜25秒',
+    expectedClearTime: '17〜22秒',
     playerStart: { x: 112, y: 560 },
     goal: { x: 248, y: 184, width: 52, height: 40 },
     map: level3Map,
@@ -552,10 +552,10 @@ export const levels: LevelConfig[] = [
     name: '図書室前から職員室前へ',
     startLabel: '図書室前の廊下',
     goalLabel: '職員室前',
-    timeLimit: 33,
+    timeLimit: 28,
     objective: '階段移動と複数教師の回避',
     introText: '階段では落ち着いて移動しよう',
-    expectedClearTime: '24〜30秒',
+    expectedClearTime: '21〜27秒',
     playerStart: { x: 112, y: 224 },
     goalFloor: 2,
     goal: { x: 248, y: 432, width: 52, height: 40 },
@@ -596,10 +596,10 @@ export const levels: LevelConfig[] = [
     name: '音楽室前から玄関ホールへ',
     startLabel: '音楽室前の廊下',
     goalLabel: '玄関ホール',
-    timeLimit: 38,
+    timeLimit: 33,
     objective: '総仕上げ',
     introText: '最後は校舎を抜けて玄関へ！',
-    expectedClearTime: '28〜35秒',
+    expectedClearTime: '25〜32秒',
     playerStart: { x: 196, y: 552 },
     goalFloor: 1,
     goal: { x: 168, y: 144, width: 56, height: 48 },
