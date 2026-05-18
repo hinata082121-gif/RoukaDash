@@ -168,8 +168,9 @@ export class GameScene extends Phaser.Scene {
     this.sideTeachers = side.teachers.map((teacher) => this.createSideTeacher(teacher, side));
     side.students.forEach((student) => {
       const isClassroom = student.layer === 'classroom';
-      const y = isClassroom ? side.floorY - 212 : side.floorY - 22;
-      new Student(this, student.x, y, student.color, isClassroom ? 0.76 : 0.94, isClassroom ? 27 : 43);
+      const y = isClassroom ? side.floorY - 210 : side.floorY - 20;
+      const sprite = new Student(this, student.x, y, student.color, isClassroom ? 0.9 : 1.06, isClassroom ? 27 : 43);
+      if (isClassroom) sprite.setAlpha(0.86);
     });
 
     this.inputManager = new InputManager(this, 'horizontalButtons');
@@ -236,7 +237,7 @@ export class GameScene extends Phaser.Scene {
     const roomY = 158;
     const hallwayBackY = 430;
     const floorTopY = 470;
-    const floorBottomY = 700;
+    const floorBottomY = 686;
     const topInset = 42;
     const bottomOutset = -90;
     const floorLeftAt = (y: number) => Phaser.Math.Linear(topInset, bottomOutset, (y - floorTopY) / (floorBottomY - floorTopY));
@@ -254,8 +255,8 @@ export class GameScene extends Phaser.Scene {
     const floorBands = [
       { y1: floorTopY, y2: 512, color: 0xd5b16e },
       { y1: 512, y2: 560, color: 0xdfbf79 },
-      { y1: 560, y2: 622, color: 0xe8cd8d },
-      { y1: 622, y2: floorBottomY, color: 0xf0d99f }
+      { y1: 560, y2: 618, color: 0xe8cd8d },
+      { y1: 618, y2: floorBottomY, color: 0xf0d99f }
     ];
     for (const band of floorBands) {
       g.fillStyle(band.color, 1);
@@ -278,12 +279,21 @@ export class GameScene extends Phaser.Scene {
       g.lineBetween(x, floorTopY, x - 84, floorBottomY);
       g.lineBetween(x + 90, floorTopY, x + 156, floorBottomY);
     }
+    g.lineStyle(5, THEME.colors.hallWax, 0.34);
+    for (let x = 54; x < side.worldWidth; x += 270) {
+      g.lineBetween(x, 530, x + 116, 520);
+      g.lineBetween(x + 38, 652, x + 178, 636);
+    }
     g.lineStyle(4, 0xfff3c4, 0.46);
     g.lineBetween(0, side.floorY + 20, side.worldWidth, side.floorY + 20);
 
     for (let x = 120; x < side.worldWidth; x += 260) {
       this.drawSidePoster(g, x, 400);
       this.drawSideExtinguisher(g, x + 96, 428);
+      this.drawSideUmbrellaStand(g, x + 154, 430);
+    }
+    for (let x = 330; x < side.worldWidth; x += 520) {
+      this.drawSideCleaningCloset(g, x, 384);
     }
 
     for (const room of side.backgroundRooms) {
@@ -314,6 +324,10 @@ export class GameScene extends Phaser.Scene {
 
     g.fillStyle(color.dark, 1);
     g.fillRect(x + 18, y + 26, width - 36, 34);
+    g.fillStyle(0xfff7d6, 0.9);
+    g.fillRect(x + 28, y + 52, 24, 3);
+    g.fillStyle(0xf87171, 0.85);
+    g.fillRect(x + width - 64, y + 50, 18, 5);
     g.fillStyle(0xf2ddb4, 0.95);
     g.fillRect(x + 10, y + 122, width - 20, height - 132);
     g.lineStyle(2, 0xbc9865, 0.35);
@@ -325,6 +339,9 @@ export class GameScene extends Phaser.Scene {
       g.fillRect(wx, y + 78, 32, 34);
       g.fillStyle(THEME.colors.windowLight, 0.8);
       g.fillRect(wx + 6, y + 84, 12, 6);
+      g.fillStyle(THEME.colors.curtain, 0.88);
+      g.fillRect(wx - 4, y + 76, 5, 38);
+      g.fillRect(wx + 31, y + 76, 5, 38);
       g.fillStyle(THEME.colors.window, 1);
     }
 
@@ -332,6 +349,8 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(x + width - 42, y + height - 86, 30, 86);
     g.lineStyle(3, THEME.colors.doorDark, 0.8);
     g.strokeRect(x + width - 42, y + height - 86, 30, 86);
+    g.fillStyle(THEME.colors.windowLight, 0.86);
+    g.fillRect(x + width - 35, y + height - 74, 16, 16);
     g.fillStyle(0x3b2314, 1);
     g.fillRect(x + width - 18, y + height - 44, 4, 4);
 
@@ -341,6 +360,7 @@ export class GameScene extends Phaser.Scene {
       g.fillRect(dx, y + 150, 28, 18);
       g.fillRect(dx, y + 188, 28, 18);
     }
+    this.drawSideRoomDetail(g, x, y, width, height, kind, label);
 
     this.add
       .text(x + 16, y + 12, `${floor}F ${label}`, {
@@ -353,6 +373,87 @@ export class GameScene extends Phaser.Scene {
       .setDepth(8);
   }
 
+  private drawSideRoomDetail(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number, kind: RoomConfig['kind'], label: string): void {
+    g.fillStyle(THEME.colors.paper, 0.95);
+    g.fillRect(x + width - 76, y + 30, 14, 18);
+    g.fillRect(x + width - 58, y + 32, 14, 16);
+
+    if (kind === 'science') {
+      g.fillStyle(0x1f9e95, 1);
+      g.fillRect(x + 28, y + 156, width - 96, 22);
+      g.fillStyle(0x9bdaf1, 1);
+      g.fillTriangle(x + 48, y + 142, x + 38, y + 170, x + 58, y + 170);
+      g.fillRect(x + 76, y + 144, 12, 26);
+      g.fillStyle(0xe8fbff, 0.9);
+      g.fillRect(x + 78, y + 150, 8, 8);
+    } else if (kind === 'music') {
+      g.fillStyle(0x292524, 1);
+      g.fillRect(x + 28, y + 152, 58, 26);
+      g.fillRect(x + 72, y + 132, 14, 46);
+      g.fillStyle(0xfff7d6, 1);
+      for (let keyX = x + 32; keyX < x + 80; keyX += 8) g.fillRect(keyX, y + 160, 5, 10);
+      this.drawMusicNote(g, x + 118, y + 146);
+      this.drawMusicNote(g, x + 144, y + 172);
+    } else if (kind === 'library') {
+      for (let shelfX = x + 24; shelfX < x + width - 82; shelfX += 36) {
+        g.fillStyle(0x8b5a2b, 1);
+        g.fillRect(shelfX, y + 132, 28, 84);
+        for (let bookY = y + 140; bookY < y + 206; bookY += 14) {
+          g.fillStyle(bookY % 28 === 0 ? 0x4f9ad8 : 0xf59e0b, 1);
+          g.fillRect(shelfX + 4, bookY, 5, 10);
+          g.fillStyle(0x71c562, 1);
+          g.fillRect(shelfX + 12, bookY, 5, 10);
+        }
+      }
+    } else if (kind === 'nurse') {
+      g.fillStyle(0xffffff, 0.96);
+      g.fillRect(x + 24, y + 148, 74, 32);
+      g.fillStyle(0x93c5fd, 0.84);
+      g.fillRect(x + 30, y + 154, 60, 18);
+      g.fillStyle(0xef4444, 1);
+      g.fillRect(x + 118, y + 136, 10, 34);
+      g.fillRect(x + 106, y + 148, 34, 10);
+      g.fillStyle(0xf8fafc, 0.9);
+      g.fillRect(x + width - 84, y + 118, 16, 96);
+      g.fillRect(x + width - 64, y + 118, 16, 96);
+    } else if (kind === 'staff') {
+      for (let deskX = x + 24; deskX < x + width - 84; deskX += 34) {
+        g.fillStyle(0x8b5a2b, 1);
+        g.fillRect(deskX, y + 134, 26, 22);
+        g.fillStyle(0xfff7d6, 1);
+        g.fillRect(deskX + 5, y + 138, 12, 5);
+        g.fillRect(deskX + 9, y + 148, 12, 5);
+      }
+      g.fillStyle(THEME.colors.locker, 1);
+      g.fillRect(x + width - 94, y + 128, 28, 76);
+      g.lineStyle(2, 0x35505a, 0.7);
+      g.lineBetween(x + width - 80, y + 132, x + width - 80, y + 200);
+    } else if (kind === 'storage' || label.includes('玄関') || label.includes('下駄箱')) {
+      for (let row = 0; row < 3; row += 1) {
+        for (let col = 0; col < 4; col += 1) {
+          g.fillStyle(THEME.colors.shoeBox, 1);
+          g.fillRect(x + 24 + col * 24, y + 134 + row * 24, 18, 16);
+          g.fillStyle(THEME.colors.shoeBoxDark, 0.68);
+          g.fillRect(x + 27 + col * 24, y + 139 + row * 24, 12, 3);
+        }
+      }
+    } else {
+      g.fillStyle(0x9b6b35, 1);
+      g.fillRect(x + 26, y + 128, 46, 20);
+      g.fillStyle(0xfff7d6, 1);
+      g.fillRect(x + 32, y + 132, 18, 5);
+      g.fillStyle(THEME.colors.boardTrim, 1);
+      g.fillRect(x + 86, y + 130, 38, 26);
+    }
+  }
+
+  private drawMusicNote(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.fillStyle(0x3b2f4b, 1);
+    g.fillRect(x + 9, y, 4, 24);
+    g.fillCircle(x + 5, y + 24, 7);
+    g.fillRect(x + 12, y, 12, 4);
+  }
+
   private drawSidePoster(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
     g.fillStyle(THEME.colors.board, 1);
     g.fillRect(x, y, 72, 38);
@@ -361,6 +462,8 @@ export class GameScene extends Phaser.Scene {
     g.fillStyle(0xfef3c7, 1);
     g.fillRect(x + 8, y + 10, 44, 4);
     g.fillRect(x + 8, y + 22, 56, 4);
+    g.fillStyle(0xfff7d6, 1);
+    g.fillRect(x + 54, y + 8, 10, 22);
   }
 
   private drawSideExtinguisher(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
@@ -368,6 +471,29 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(x, y, 12, 32);
     g.fillStyle(0xfef2f2, 1);
     g.fillRect(x + 3, y + 9, 6, 5);
+  }
+
+  private drawSideUmbrellaStand(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.fillStyle(0x6b7280, 1);
+    g.fillRect(x, y + 18, 28, 10);
+    g.lineStyle(2, 0x374151, 1);
+    for (let offset = 4; offset <= 22; offset += 6) {
+      g.lineBetween(x + offset, y + 18, x + offset - 3, y);
+    }
+    g.fillStyle(0x60a5fa, 1);
+    g.fillTriangle(x + 2, y + 4, x + 13, y - 8, x + 24, y + 4);
+  }
+
+  private drawSideCleaningCloset(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.fillStyle(0x8b5a2b, 1);
+    g.fillRect(x, y, 42, 62);
+    g.lineStyle(3, THEME.colors.doorDark, 0.8);
+    g.strokeRect(x, y, 42, 62);
+    g.lineBetween(x + 21, y + 4, x + 21, y + 58);
+    g.fillStyle(0xfacc15, 1);
+    g.fillRect(x + 10, y + 10, 22, 8);
+    g.fillStyle(0xfef3c7, 1);
+    g.fillRect(x + 12, y + 12, 18, 3);
   }
 
   private drawSideStairs(g: Phaser.GameObjects.Graphics, trigger: RectConfig, toFloor: number): void {
@@ -400,21 +526,25 @@ export class GameScene extends Phaser.Scene {
 
   private createSideTeacher(config: SideScrollTeacherConfig, side: SideScrollConfig): SideTeacherRuntime {
     const y = config.type === 'classroom_watch' ? side.floorY - 214 : side.floorY - 22;
-    const visualScale = config.type === 'classroom_watch' ? 0.82 : 1.12;
+    const visualScale = config.type === 'classroom_watch' ? 0.92 : 1.22;
     const body = this.add.container(config.x, y).setDepth(config.type === 'classroom_watch' ? 28 : 45);
-    const shadow = this.add.ellipse(0, 18, 28, 9, 0x000000, 0.18);
-    const suit = this.add.rectangle(0, 2, 25, 34, THEME.colors.teacherSuit, 1).setStrokeStyle(3, 0xffffff, 0.75);
-    const face = this.add.rectangle(0, -20, 18, 15, THEME.colors.teacherFace, 1).setStrokeStyle(2, 0x5c321d, 0.8);
-    const hair = this.add.rectangle(0, -27, 18, 5, 0x292524, 1);
+    const shadow = this.add.ellipse(0, 21, 34, 11, 0x000000, 0.2);
+    const suit = this.add.rectangle(0, 4, 28, 40, THEME.colors.teacherSuit, 1).setStrokeStyle(3, 0xffffff, 0.75);
+    const shirt = this.add.rectangle(0, -3, 12, 16, 0xf8fafc, 0.92);
+    const tie = this.add.triangle(0, 7, 0, -5, -6, 11, 6, 11, 0x1e3a8a, 0.9);
+    const face = this.add.rectangle(0, -23, 20, 17, THEME.colors.teacherFace, 1).setStrokeStyle(2, 0x5c321d, 0.8);
+    const hair = this.add.rectangle(0, -31, 20, 6, 0x292524, 1);
     const label = this.add
-      .text(0, 2, '先生', {
+      .text(0, 5, '先生', {
         fontFamily: THEME.font,
-        fontSize: '10px',
+        fontSize: '12px',
         color: '#ffffff',
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        stroke: '#15101d',
+        strokeThickness: 2
       })
       .setOrigin(0.5);
-    body.add([shadow, suit, face, hair, label]);
+    body.add([shadow, suit, shirt, tie, face, hair, label]);
 
     return {
       config,
@@ -450,8 +580,8 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       teacher.body.setAlpha(1);
-      if (teacher.warningVision) this.drawSideVision(teacher.vision, teacher.warningVision, THEME.colors.warningVision, 0.34);
-      if (teacher.activeVision) this.drawSideVision(teacher.vision, teacher.activeVision, THEME.colors.dangerVision, 0.38);
+      if (teacher.warningVision) this.drawSideVision(teacher.vision, teacher.warningVision, THEME.colors.warningVision, 0.38);
+      if (teacher.activeVision) this.drawSideVision(teacher.vision, teacher.activeVision, THEME.colors.dangerVision, 0.44);
     }
   }
 
@@ -486,14 +616,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createSideVisionRect(x: number, floorY: number, direction: SideScrollDirection, width: number, height: number): Phaser.Geom.Rectangle {
-    const rectX = direction === 'right' ? x + 20 : x - width - 20;
-    return new Phaser.Geom.Rectangle(rectX, floorY - height, width, height);
+    const rectX = direction === 'right' ? x + 28 : x - width - 28;
+    return new Phaser.Geom.Rectangle(rectX, floorY - height - 4, width, height + 8);
   }
 
   private drawSideVision(g: Phaser.GameObjects.Graphics, rect: Phaser.Geom.Rectangle, color: number, alpha: number): void {
     g.fillStyle(color, alpha);
     g.fillRectShape(rect);
-    g.lineStyle(3, 0xffedd5, 0.68);
+    g.lineStyle(4, 0xffedd5, 0.76);
     g.strokeRectShape(rect);
   }
 
