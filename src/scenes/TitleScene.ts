@@ -131,7 +131,7 @@ export class TitleScene extends Phaser.Scene {
     if (this.howToOverlay) return;
 
     const lines = [
-      '左下スティックで移動',
+      '左下の← →で移動',
       '右下DASH長押しで走る',
       '先生の視界で走るとゲームオーバー',
       '歩いているだけなら見られてもセーフ',

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { THEME } from '../config/visualTheme';
 
 export class Student extends Phaser.GameObjects.Container {
-  constructor(scene: Phaser.Scene, x: number, y: number, color = 0x4f9ad8) {
+  constructor(scene: Phaser.Scene, x: number, y: number, color = 0x4f9ad8, scale = 1, depth = 30) {
     super(scene, x, y);
 
     const shadow = scene.add.ellipse(0, 15, 18, 7, 0x000000, 0.18);
@@ -12,7 +12,8 @@ export class Student extends Phaser.GameObjects.Container {
     const bag = scene.add.rectangle(-10, 5, 5, 11, 0xffd166, 0.92);
 
     this.add([shadow, body, face, hair, bag]);
-    this.setDepth(30);
+    this.setScale(scale);
+    this.setDepth(depth);
     scene.add.existing(this);
 
     scene.tweens.add({

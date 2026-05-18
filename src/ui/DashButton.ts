@@ -10,8 +10,8 @@ export class DashButton {
   isDown = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    this.base = scene.add.circle(x, y, 60, THEME.colors.dash, 0.9).setStrokeStyle(5, THEME.colors.uiBorder, 0.9);
-    this.meter = scene.add.circle(x, y, 68, 0xffffff, 0).setStrokeStyle(6, 0x86efac, 0.9);
+    this.base = scene.add.circle(x, y, 54, THEME.colors.dash, 0.9).setStrokeStyle(5, THEME.colors.uiBorder, 0.9);
+    this.meter = scene.add.circle(x, y, 62, 0xffffff, 0).setStrokeStyle(6, 0x86efac, 0.9);
     this.label = scene.add
       .text(x, y, 'DASH', {
         fontFamily: THEME.font,

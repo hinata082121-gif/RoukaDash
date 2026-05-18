@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 import { DashButton } from '../ui/DashButton';
+import { HorizontalMoveControls } from '../ui/HorizontalMoveControls';
 import { VirtualJoystick } from '../ui/VirtualJoystick';
 
 interface CursorKeys {
@@ -23,8 +24,11 @@ export interface InputState {
   inputSource: 'touch' | 'keyboard' | 'none';
 }
 
+export type InputMode = 'joystick' | 'horizontalButtons';
+
 export class InputManager {
-  private joystick: VirtualJoystick;
+  private joystick?: VirtualJoystick;
+  private horizontalControls?: HorizontalMoveControls;
   private dashButton: DashButton;
   private keys?: CursorKeys;
   readonly state: InputState = {
@@ -39,8 +43,12 @@ export class InputManager {
   private readonly dashRecoverPerSecond = 0.24;
   private readonly dashResumeThreshold = 0.18;
 
-  constructor(private scene: Phaser.Scene) {
-    this.joystick = new VirtualJoystick(scene, 82, GAME_HEIGHT - 126);
+  constructor(private scene: Phaser.Scene, private mode: InputMode = 'joystick') {
+    if (mode === 'horizontalButtons') {
+      this.horizontalControls = new HorizontalMoveControls(scene);
+    } else {
+      this.joystick = new VirtualJoystick(scene, 82, GAME_HEIGHT - 126);
+    }
     this.dashButton = new DashButton(scene, GAME_WIDTH - 82, GAME_HEIGHT - 126);
 
     if (scene.input.keyboard) {
@@ -59,15 +67,27 @@ export class InputManager {
   }
 
   update(deltaMs: number): InputState {
-    const joystickVector = this.joystick.vector;
-    const keyboardVector = this.getKeyboardVector();
+    const keyboardVector = this.mode === 'horizontalButtons' ? this.getHorizontalKeyboardVector() : this.getKeyboardVector();
 
-    if (joystickVector.lengthSq() > 0.01) {
-      this.state.direction.copy(joystickVector);
-      this.state.inputSource = 'touch';
+    if (this.mode === 'horizontalButtons') {
+      const buttonX = this.horizontalControls?.directionX ?? 0;
+      if (buttonX !== 0) {
+        this.state.direction.set(buttonX, 0);
+        this.state.inputSource = 'touch';
+      } else {
+        this.state.direction.copy(keyboardVector);
+        this.state.inputSource = keyboardVector.lengthSq() > 0.01 ? 'keyboard' : this.dashButton.isDown ? 'touch' : Boolean(this.keys?.shift.isDown) ? 'keyboard' : 'none';
+      }
+      this.state.direction.y = 0;
     } else {
-      this.state.direction.copy(keyboardVector);
-      this.state.inputSource = keyboardVector.lengthSq() > 0.01 ? 'keyboard' : this.dashButton.isDown ? 'touch' : Boolean(this.keys?.shift.isDown) ? 'keyboard' : 'none';
+      const joystickVector = this.joystick?.vector ?? new Phaser.Math.Vector2(0, 0);
+      if (joystickVector.lengthSq() > 0.01) {
+        this.state.direction.copy(joystickVector);
+        this.state.inputSource = 'touch';
+      } else {
+        this.state.direction.copy(keyboardVector);
+        this.state.inputSource = keyboardVector.lengthSq() > 0.01 ? 'keyboard' : this.dashButton.isDown ? 'touch' : Boolean(this.keys?.shift.isDown) ? 'keyboard' : 'none';
+      }
     }
 
     const wantsDash = this.dashButton.isDown || Boolean(this.keys?.shift.isDown);
@@ -90,7 +110,8 @@ export class InputManager {
   }
 
   destroy(): void {
-    this.joystick.destroy();
+    this.joystick?.destroy();
+    this.horizontalControls?.destroy();
     this.dashButton.destroy();
   }
 
@@ -104,6 +125,18 @@ export class InputManager {
     if (this.keys.right.isDown || this.keys.d.isDown) direction.x += 1;
     if (this.keys.up.isDown || this.keys.w.isDown) direction.y -= 1;
     if (this.keys.down.isDown || this.keys.s.isDown) direction.y += 1;
+
+    return direction.lengthSq() > 0 ? direction.normalize() : direction;
+  }
+
+  private getHorizontalKeyboardVector(): Phaser.Math.Vector2 {
+    const direction = new Phaser.Math.Vector2(0, 0);
+    if (!this.keys) {
+      return direction;
+    }
+
+    if (this.keys.left.isDown || this.keys.a.isDown) direction.x -= 1;
+    if (this.keys.right.isDown || this.keys.d.isDown) direction.x += 1;
 
     return direction.lengthSq() > 0 ? direction.normalize() : direction;
   }
