@@ -338,7 +338,7 @@ const sideLevel4: SideScrollConfig = {
       visionHeight: 82,
       patrolMinX: 320,
       patrolMaxX: 600,
-      speed: 66
+      speed: 70
     },
     {
       id: 'l4-patrol-2f',
@@ -350,7 +350,7 @@ const sideLevel4: SideScrollConfig = {
       visionHeight: 82,
       patrolMinX: 1000,
       patrolMaxX: 1330,
-      speed: 68
+      speed: 72
     }
   ],
   stairTransitions: [
@@ -552,10 +552,10 @@ export const levels: LevelConfig[] = [
     name: '図書室前から職員室前へ',
     startLabel: '図書室前の廊下',
     goalLabel: '職員室前',
-    timeLimit: 28,
+    timeLimit: 24,
     objective: '階段移動と複数教師の回避',
     introText: '階段では落ち着いて移動しよう',
-    expectedClearTime: '21〜27秒',
+    expectedClearTime: '19〜22秒',
     playerStart: { x: 112, y: 224 },
     goalFloor: 2,
     goal: { x: 248, y: 432, width: 52, height: 40 },
@@ -596,10 +596,10 @@ export const levels: LevelConfig[] = [
     name: '音楽室前から玄関ホールへ',
     startLabel: '音楽室前の廊下',
     goalLabel: '玄関ホール',
-    timeLimit: 33,
+    timeLimit: 31,
     objective: '総仕上げ',
     introText: '最後は校舎を抜けて玄関へ！',
-    expectedClearTime: '25〜32秒',
+    expectedClearTime: '25〜28秒',
     playerStart: { x: 196, y: 552 },
     goalFloor: 1,
     goal: { x: 168, y: 144, width: 56, height: 48 },
