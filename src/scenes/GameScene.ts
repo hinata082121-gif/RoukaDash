@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 import { DEBUG_MODE } from '../config/releaseConfig';
-import { THEME } from '../config/visualTheme';
+import { SIDE_VISUAL, THEME } from '../config/visualTheme';
 import { Goal } from '../entities/Goal';
 import { Player } from '../entities/Player';
 import { Student } from '../entities/Student';
 import { Teacher } from '../entities/Teacher';
+import { SideScrollRenderer } from '../renderers/SideScrollRenderer';
 import type { LevelConfig, MapPropConfig, RectConfig, RoomConfig, StairTransitionConfig } from '../types/LevelTypes';
 import type { SideScrollConfig, SideScrollDirection, SideScrollTeacherConfig, SideScrollTeacherState } from '../types/SideScrollTypes';
 import { Hud } from '../ui/Hud';
@@ -161,7 +162,7 @@ export class GameScene extends Phaser.Scene {
     this.debugEnabled = this.shouldEnableDebug();
     this.sideGoalX = side.goalX;
 
-    this.drawSideScrollWorld(side);
+    SideScrollRenderer.render(this, side);
     this.goal = new Goal(this, side.goalX - 26, side.floorY - 86, 64, 82, this.level.goalLabel);
     this.player = new Player(this, side.startX, side.floorY);
     this.player.setDepth(50);
@@ -169,7 +170,7 @@ export class GameScene extends Phaser.Scene {
     side.students.forEach((student) => {
       const isClassroom = student.layer === 'classroom';
       const y = isClassroom ? side.floorY - 210 : side.floorY - 20;
-      const sprite = new Student(this, student.x, y, student.color, isClassroom ? 0.9 : 1.06, isClassroom ? 27 : 43);
+      const sprite = new Student(this, student.x, y, student.color, isClassroom ? SIDE_VISUAL.studentScaleClassroomStanding : SIDE_VISUAL.studentScaleHallway, isClassroom ? 27 : 43);
       if (isClassroom) sprite.setAlpha(0.86);
     });
 
@@ -235,9 +236,9 @@ export class GameScene extends Phaser.Scene {
     const g = this.add.graphics();
     const wallY = 112;
     const roomY = 158;
-    const hallwayBackY = 430;
-    const floorTopY = 470;
-    const floorBottomY = 686;
+    const hallwayBackY = SIDE_VISUAL.hallwayBackY;
+    const floorTopY = SIDE_VISUAL.floorTopY;
+    const floorBottomY = SIDE_VISUAL.floorBottomY;
     const topInset = 42;
     const bottomOutset = -90;
     const floorLeftAt = (y: number) => Phaser.Math.Linear(topInset, bottomOutset, (y - floorTopY) / (floorBottomY - floorTopY));
@@ -526,7 +527,7 @@ export class GameScene extends Phaser.Scene {
 
   private createSideTeacher(config: SideScrollTeacherConfig, side: SideScrollConfig): SideTeacherRuntime {
     const y = config.type === 'classroom_watch' ? side.floorY - 214 : side.floorY - 22;
-    const visualScale = config.type === 'classroom_watch' ? 0.92 : 1.22;
+    const visualScale = config.type === 'classroom_watch' ? SIDE_VISUAL.teacherScaleClassroom : SIDE_VISUAL.teacherScaleHallway;
     const body = this.add.container(config.x, y).setDepth(config.type === 'classroom_watch' ? 28 : 45);
     const shadow = this.add.ellipse(0, 21, 34, 11, 0x000000, 0.2);
     const suit = this.add.rectangle(0, 4, 28, 40, THEME.colors.teacherSuit, 1).setStrokeStyle(3, 0xffffff, 0.75);
@@ -622,9 +623,13 @@ export class GameScene extends Phaser.Scene {
 
   private drawSideVision(g: Phaser.GameObjects.Graphics, rect: Phaser.Geom.Rectangle, color: number, alpha: number): void {
     g.fillStyle(color, alpha);
-    g.fillRectShape(rect);
-    g.lineStyle(4, 0xffedd5, 0.76);
-    g.strokeRectShape(rect);
+    g.fillRoundedRect(rect.x, rect.y, rect.width, rect.height, 13);
+    g.fillStyle(0xfff7d6, alpha * 0.42);
+    g.fillRoundedRect(rect.x + 8, rect.y + 8, Math.max(12, rect.width - 18), 10, 5);
+    g.lineStyle(5, 0xffedd5, 0.82);
+    g.strokeRoundedRect(rect.x, rect.y, rect.width, rect.height, 13);
+    g.lineStyle(2, 0x7f1d1d, 0.38);
+    g.strokeRoundedRect(rect.x + 4, rect.y + 4, Math.max(1, rect.width - 8), Math.max(1, rect.height - 8), 10);
   }
 
   private isPointInSideTeacherVision(point: Phaser.Math.Vector2): boolean {

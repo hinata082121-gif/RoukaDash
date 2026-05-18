@@ -1,5 +1,6 @@
 import type { LevelConfig, LevelMapConfig } from '../types/LevelTypes';
 import type { SideScrollConfig } from '../types/SideScrollTypes';
+import { SIDE_VISUAL } from './visualTheme';
 
 const level1Map: LevelMapConfig = {
   floorLabel: '1F',
@@ -199,7 +200,7 @@ const level5Map: LevelMapConfig = {
 
 const sideLevel1: SideScrollConfig = {
   worldWidth: 980,
-  floorY: 610,
+  floorY: SIDE_VISUAL.playerLaneY,
   startX: 82,
   goalX: 900,
   initialFloor: 1,
@@ -221,18 +222,18 @@ const sideLevel1: SideScrollConfig = {
       x: 520,
       floor: 1,
       direction: 'right',
-      visionWidth: 150,
+      visionWidth: 155,
       visionHeight: 86,
       hiddenMs: 2200,
-      warningMs: 1100,
-      watchingMs: 1700
+      warningMs: 1000,
+      watchingMs: 1650
     }
   ]
 };
 
 const sideLevel2: SideScrollConfig = {
   worldWidth: 1180,
-  floorY: 610,
+  floorY: SIDE_VISUAL.playerLaneY,
   startX: 82,
   goalX: 1080,
   initialFloor: 2,
@@ -254,18 +255,18 @@ const sideLevel2: SideScrollConfig = {
       x: 520,
       floor: 2,
       direction: 'right',
-      visionWidth: 150,
+      visionWidth: 165,
       visionHeight: 82,
       patrolMinX: 420,
       patrolMaxX: 720,
-      speed: 54
+      speed: 58
     }
   ]
 };
 
 const sideLevel3: SideScrollConfig = {
   worldWidth: 1360,
-  floorY: 610,
+  floorY: SIDE_VISUAL.playerLaneY,
   startX: 84,
   goalX: 1250,
   initialFloor: 1,
@@ -287,11 +288,11 @@ const sideLevel3: SideScrollConfig = {
       x: 460,
       floor: 1,
       direction: 'right',
-      visionWidth: 140,
+      visionWidth: 155,
       visionHeight: 82,
       patrolMinX: 360,
       patrolMaxX: 620,
-      speed: 52
+      speed: 56
     },
     {
       id: 'l3-watch',
@@ -299,18 +300,18 @@ const sideLevel3: SideScrollConfig = {
       x: 900,
       floor: 1,
       direction: 'left',
-      visionWidth: 160,
+      visionWidth: 170,
       visionHeight: 86,
       hiddenMs: 2100,
-      warningMs: 1000,
-      watchingMs: 1600
+      warningMs: 950,
+      watchingMs: 1650
     }
   ]
 };
 
 const sideLevel4: SideScrollConfig = {
   worldWidth: 1580,
-  floorY: 610,
+  floorY: SIDE_VISUAL.playerLaneY,
   startX: 84,
   goalX: 1490,
   initialFloor: 3,
@@ -333,11 +334,11 @@ const sideLevel4: SideScrollConfig = {
       x: 430,
       floor: 3,
       direction: 'right',
-      visionWidth: 140,
+      visionWidth: 155,
       visionHeight: 82,
       patrolMinX: 320,
       patrolMaxX: 600,
-      speed: 54
+      speed: 58
     },
     {
       id: 'l4-patrol-2f',
@@ -345,11 +346,11 @@ const sideLevel4: SideScrollConfig = {
       x: 1120,
       floor: 2,
       direction: 'left',
-      visionWidth: 145,
+      visionWidth: 160,
       visionHeight: 82,
       patrolMinX: 1000,
       patrolMaxX: 1330,
-      speed: 56
+      speed: 60
     }
   ],
   stairTransitions: [
@@ -358,7 +359,7 @@ const sideLevel4: SideScrollConfig = {
       fromFloor: 3,
       toFloor: 2,
       trigger: { x: 760, y: 550, width: 88, height: 100 },
-      destinationSpawn: { x: 900, y: 610 },
+      destinationSpawn: { x: 900, y: SIDE_VISUAL.playerLaneY },
       label: '2Fへ移動中...'
     }
   ]
@@ -366,7 +367,7 @@ const sideLevel4: SideScrollConfig = {
 
 const sideLevel5: SideScrollConfig = {
   worldWidth: 2160,
-  floorY: 610,
+  floorY: SIDE_VISUAL.playerLaneY,
   startX: 84,
   goalX: 2060,
   initialFloor: 3,
@@ -393,11 +394,11 @@ const sideLevel5: SideScrollConfig = {
       x: 430,
       floor: 3,
       direction: 'right',
-      visionWidth: 150,
+      visionWidth: 160,
       visionHeight: 86,
       hiddenMs: 2000,
       warningMs: 900,
-      watchingMs: 1500
+      watchingMs: 1600
     },
     {
       id: 'l5-patrol-2f',
@@ -405,11 +406,11 @@ const sideLevel5: SideScrollConfig = {
       x: 1060,
       floor: 2,
       direction: 'right',
-      visionWidth: 145,
+      visionWidth: 160,
       visionHeight: 82,
       patrolMinX: 920,
       patrolMaxX: 1240,
-      speed: 58
+      speed: 62
     },
     {
       id: 'l5-static-1f',
@@ -417,7 +418,7 @@ const sideLevel5: SideScrollConfig = {
       x: 1680,
       floor: 1,
       direction: 'left',
-      visionWidth: 150,
+      visionWidth: 165,
       visionHeight: 82
     },
     {
@@ -426,11 +427,11 @@ const sideLevel5: SideScrollConfig = {
       x: 1880,
       floor: 1,
       direction: 'left',
-      visionWidth: 140,
+      visionWidth: 155,
       visionHeight: 86,
       hiddenMs: 2300,
       warningMs: 900,
-      watchingMs: 1400
+      watchingMs: 1550
     }
   ],
   stairTransitions: [
@@ -439,7 +440,7 @@ const sideLevel5: SideScrollConfig = {
       fromFloor: 3,
       toFloor: 2,
       trigger: { x: 680, y: 550, width: 88, height: 100 },
-      destinationSpawn: { x: 810, y: 610 },
+      destinationSpawn: { x: 810, y: SIDE_VISUAL.playerLaneY },
       label: '2Fへ移動中...'
     },
     {
@@ -447,7 +448,7 @@ const sideLevel5: SideScrollConfig = {
       fromFloor: 2,
       toFloor: 1,
       trigger: { x: 1420, y: 550, width: 88, height: 100 },
-      destinationSpawn: { x: 1530, y: 610 },
+      destinationSpawn: { x: 1530, y: SIDE_VISUAL.playerLaneY },
       label: '1Fへ移動中...'
     }
   ]
@@ -459,9 +460,9 @@ export const levels: LevelConfig[] = [
     name: '1階教室前から玄関ホールへ',
     startLabel: '1階教室前の廊下',
     goalLabel: '玄関ホール',
-    timeLimit: 20,
+    timeLimit: 19,
     objective: '基本ルールのチュートリアル',
-    expectedClearTime: '25〜35秒',
+    expectedClearTime: '13〜17秒',
     playerStart: { x: 196, y: 608 },
     goal: { x: 168, y: 144, width: 56, height: 48 },
     map: level1Map,
@@ -484,10 +485,10 @@ export const levels: LevelConfig[] = [
     name: '理科室前から2年教室前へ',
     startLabel: '2階理科室前の廊下',
     goalLabel: '2年教室前',
-    timeLimit: 25,
+    timeLimit: 23,
     objective: '巡回教師を避ける',
     introText: '巡回する先生に注意！',
-    expectedClearTime: '35〜45秒',
+    expectedClearTime: '16〜21秒',
     playerStart: { x: 112, y: 192 },
     goal: { x: 248, y: 424, width: 52, height: 40 },
     map: level2Map,
@@ -512,10 +513,10 @@ export const levels: LevelConfig[] = [
     name: '保健室前から1年教室前へ',
     startLabel: '保健室前の廊下',
     goalLabel: '1年教室前',
-    timeLimit: 30,
+    timeLimit: 28,
     objective: '待機とルート判断を学ぶ',
     introText: '安全な場所で待とう',
-    expectedClearTime: '45〜55秒',
+    expectedClearTime: '20〜25秒',
     playerStart: { x: 112, y: 560 },
     goal: { x: 248, y: 184, width: 52, height: 40 },
     map: level3Map,
@@ -551,10 +552,10 @@ export const levels: LevelConfig[] = [
     name: '図書室前から職員室前へ',
     startLabel: '図書室前の廊下',
     goalLabel: '職員室前',
-    timeLimit: 35,
+    timeLimit: 33,
     objective: '階段移動と複数教師の回避',
     introText: '階段では落ち着いて移動しよう',
-    expectedClearTime: '50〜65秒',
+    expectedClearTime: '24〜30秒',
     playerStart: { x: 112, y: 224 },
     goalFloor: 2,
     goal: { x: 248, y: 432, width: 52, height: 40 },
@@ -595,10 +596,10 @@ export const levels: LevelConfig[] = [
     name: '音楽室前から玄関ホールへ',
     startLabel: '音楽室前の廊下',
     goalLabel: '玄関ホール',
-    timeLimit: 40,
+    timeLimit: 38,
     objective: '総仕上げ',
     introText: '最後は校舎を抜けて玄関へ！',
-    expectedClearTime: '65〜80秒',
+    expectedClearTime: '28〜35秒',
     playerStart: { x: 196, y: 552 },
     goalFloor: 1,
     goal: { x: 168, y: 144, width: 56, height: 48 },

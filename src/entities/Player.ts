@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, SAFE_MARGIN } from '../config/gameConfig';
-import { THEME } from '../config/visualTheme';
+import { SIDE_VISUAL, THEME } from '../config/visualTheme';
 import type { InputState } from '../systems/InputManager';
 
 export class Player extends Phaser.GameObjects.Container {
@@ -15,7 +15,7 @@ export class Player extends Phaser.GameObjects.Container {
   private facingX = 1;
   private readonly walkSpeed = 92;
   private readonly dashSpeed = 168;
-  private readonly sideVisualScale = 1.18;
+  private readonly sideVisualScale = SIDE_VISUAL.playerScale;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);

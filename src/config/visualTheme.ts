@@ -52,3 +52,16 @@ export const THEME = {
     goalFrame: 0xffe66d
   }
 };
+
+export const SIDE_VISUAL = {
+  playerLaneY: 618,
+  hallwayBackY: 430,
+  floorTopY: 470,
+  floorBottomY: 696,
+  playerScale: 1.32,
+  teacherScaleHallway: 1.34,
+  teacherScaleClassroom: 1.04,
+  studentScaleHallway: 1.16,
+  studentScaleClassroomStanding: 0.94,
+  studentScaleClassroomSitting: 0.84
+};
