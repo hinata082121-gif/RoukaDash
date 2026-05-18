@@ -1,4 +1,5 @@
 import type { Point, TeacherConfig } from './TeacherTypes';
+import type { SideScrollConfig } from './SideScrollTypes';
 
 export type RoomKind = 'classroom' | 'science' | 'music' | 'library' | 'nurse' | 'staff' | 'storage';
 export type MapPropKind = 'window' | 'board' | 'shoebox' | 'extinguisher' | 'stairs' | 'entrance' | 'poster';
@@ -59,6 +60,7 @@ export interface LevelConfig {
     height: number;
   };
   map: LevelMapConfig;
+  sideScroll?: SideScrollConfig;
   teachers: TeacherConfig[];
   unlockedMapArea: string;
 }

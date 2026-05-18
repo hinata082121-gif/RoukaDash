@@ -70,6 +70,27 @@ export class Player extends Phaser.GameObjects.Container {
     }
   }
 
+  updateSideScroll(input: InputState, deltaMs: number, floorY: number, minX: number, maxX: number): void {
+    const horizontal = Phaser.Math.Clamp(input.direction.x, -1, 1);
+    const moving = Math.abs(horizontal) > 0.02;
+    const speed = input.isDashing ? this.dashSpeed : this.walkSpeed;
+    this.x = Phaser.Math.Clamp(this.x + horizontal * speed * (deltaMs / 1000), minX, maxX);
+    this.y = floorY;
+    this.rotation = 0;
+    this.setScale(horizontal < -0.02 ? -1 : 1, 1);
+
+    this.dashDust.setVisible(input.isDashing && moving);
+    this.leftStep.setVisible(input.isDashing && moving);
+    this.rightStep.setVisible(input.isDashing && moving);
+    if (input.isDashing && moving) {
+      const pulse = Math.sin(this.scene.time.now * 0.036);
+      this.dashDust.setAlpha(0.25 + pulse * 0.15);
+      this.dashDust.setScale(1.1 + Math.sin(this.scene.time.now * 0.025) * 0.18, 0.48);
+      this.leftStep.setAlpha(pulse > 0 ? 0.55 : 0.18);
+      this.rightStep.setAlpha(pulse <= 0 ? 0.55 : 0.18);
+    }
+  }
+
   getPositionVector(): Phaser.Math.Vector2 {
     return new Phaser.Math.Vector2(this.x, this.y);
   }

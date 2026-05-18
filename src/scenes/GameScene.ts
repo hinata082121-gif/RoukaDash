@@ -4,13 +4,27 @@ import { DEBUG_MODE } from '../config/releaseConfig';
 import { THEME } from '../config/visualTheme';
 import { Goal } from '../entities/Goal';
 import { Player } from '../entities/Player';
+import { Student } from '../entities/Student';
 import { Teacher } from '../entities/Teacher';
 import type { LevelConfig, MapPropConfig, RectConfig, RoomConfig, StairTransitionConfig } from '../types/LevelTypes';
+import type { SideScrollConfig, SideScrollDirection, SideScrollTeacherConfig, SideScrollTeacherState } from '../types/SideScrollTypes';
 import { Hud } from '../ui/Hud';
 import { InputManager } from '../systems/InputManager';
 import { LevelManager } from '../systems/LevelManager';
 import { ProgressManager } from '../systems/ProgressManager';
 import { VisionSystem } from '../systems/VisionSystem';
+
+interface SideTeacherRuntime {
+  config: SideScrollTeacherConfig;
+  x: number;
+  direction: SideScrollDirection;
+  state: SideScrollTeacherState;
+  elapsed: number;
+  body: Phaser.GameObjects.Container;
+  vision: Phaser.GameObjects.Graphics;
+  activeVision?: Phaser.Geom.Rectangle;
+  warningVision?: Phaser.Geom.Rectangle;
+}
 
 export class GameScene extends Phaser.Scene {
   private static readonly LEVEL1_TUTORIAL_KEY = 'chime-made-ni-kaere-level1-tutorial-seen-v1';
@@ -35,6 +49,9 @@ export class GameScene extends Phaser.Scene {
   private stairNoticeShown = false;
   private currentFloor = 1;
   private isFloorTransitioning = false;
+  private sideScroll?: SideScrollConfig;
+  private sideTeachers: SideTeacherRuntime[] = [];
+  private sideGoalX = 0;
 
   constructor() {
     super('GameScene');
@@ -42,6 +59,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data: { levelId?: number }): void {
     this.level = LevelManager.getLevel(data.levelId ?? 1);
+    this.sideScroll = this.level.sideScroll;
     this.remainingMs = this.level.timeLimit * 1000;
     this.dashCount = 0;
     this.wasDashing = false;
@@ -49,11 +67,17 @@ export class GameScene extends Phaser.Scene {
     this.paused = false;
     this.teachers = [];
     this.stairNoticeShown = false;
-    this.currentFloor = this.level.map.initialFloor ?? 1;
+    this.sideTeachers = [];
+    this.currentFloor = this.sideScroll?.initialFloor ?? this.level.map.initialFloor ?? 1;
     this.isFloorTransitioning = false;
   }
 
   create(): void {
+    if (this.sideScroll) {
+      this.createSideScrollMode(this.sideScroll);
+      return;
+    }
+
     this.cameras.main.setBackgroundColor(COLORS.bg);
     this.debugEnabled = this.shouldEnableDebug();
     this.drawSchoolFloor();
@@ -71,6 +95,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.sideScroll) {
+      this.updateSideScrollMode(delta, this.sideScroll);
+      return;
+    }
+
     if (this.finished || this.paused || this.tutorialOverlay || this.isFloorTransitioning) {
       return;
     }
@@ -125,6 +154,318 @@ export class GameScene extends Phaser.Scene {
 
   }
 
+  private createSideScrollMode(side: SideScrollConfig): void {
+    this.cameras.main.setBackgroundColor(0x25364a);
+    this.cameras.main.setBounds(0, 0, side.worldWidth, GAME_HEIGHT);
+    this.debugEnabled = this.shouldEnableDebug();
+    this.sideGoalX = side.goalX;
+
+    this.drawSideScrollWorld(side);
+    this.goal = new Goal(this, side.goalX - 26, side.floorY - 86, 64, 82, this.level.goalLabel);
+    this.player = new Player(this, side.startX, side.floorY);
+    this.player.setDepth(50);
+    this.sideTeachers = side.teachers.map((teacher) => this.createSideTeacher(teacher, side));
+    side.students.forEach((student) => {
+      const y = student.layer === 'classroom' ? side.floorY - 206 : side.floorY - 24;
+      new Student(this, student.x, y, student.color);
+    });
+
+    this.inputManager = new InputManager(this);
+    this.hud = new Hud(this, this.level.name, this.getFloorLabel(this.currentFloor), () => this.togglePause());
+    this.hud.setTime(this.level.timeLimit);
+    this.dangerFrame = this.add.graphics().setDepth(830).setScrollFactor(0).setAlpha(0);
+    this.drawDangerFrame();
+    this.createDebugOverlay();
+    this.cameras.main.startFollow(this.player, false, 0.14, 0.08, -30, 150);
+    this.showLevelIntroIfNeeded();
+  }
+
+  private updateSideScrollMode(delta: number, side: SideScrollConfig): void {
+    if (this.finished || this.paused || this.tutorialOverlay || this.isFloorTransitioning) {
+      return;
+    }
+
+    const input = this.inputManager.update(delta);
+    const horizontal = Math.abs(input.direction.x) > 0.05 ? input.direction.x : 0;
+    input.direction.set(horizontal, 0);
+    input.isDashing = input.isDashing && horizontal !== 0;
+
+    if (input.isDashing && !this.wasDashing) {
+      this.dashCount += 1;
+    }
+    this.wasDashing = input.isDashing;
+
+    this.remainingMs -= delta;
+    this.hud.setTime(this.remainingMs / 1000);
+
+    this.player.updateSideScroll(input, delta, side.floorY, 40, side.worldWidth - 40);
+    const position = this.player.getPositionVector();
+
+    const stairTransition = this.findSideStairTransition(side, position.x, position.y);
+    if (stairTransition) {
+      this.startFloorTransition(stairTransition);
+      return;
+    }
+
+    this.updateSideTeachers(delta, side);
+    const isInTeacherVision = this.isPointInSideTeacherVision(position);
+    this.hud.setGoalDirection(position, new Phaser.Math.Vector2(this.sideGoalX, side.floorY - 56));
+    this.updateDangerFrame(input.isDashing && this.isNearSideTeacherVision(position, 44));
+    this.updateDebugOverlay(input.isDashing, isInTeacherVision, input.inputSource);
+
+    if (this.currentFloor === side.goalFloor && position.x >= side.goalX) {
+      this.finish(true);
+      return;
+    }
+
+    if (input.isDashing && isInTeacherVision) {
+      this.finish(false, '先生の前で走ってしまった！');
+      return;
+    }
+
+    if (this.remainingMs <= 0) {
+      this.finish(false, 'チャイムに間に合わなかった！');
+    }
+  }
+
+  private drawSideScrollWorld(side: SideScrollConfig): void {
+    const g = this.add.graphics();
+    g.fillStyle(0xf7f0dc, 1);
+    g.fillRect(0, 112, side.worldWidth, 360);
+    g.fillStyle(0xd8c8a8, 1);
+    g.fillRect(0, 452, side.worldWidth, 40);
+    g.fillStyle(THEME.colors.hallA, 1);
+    g.fillRect(0, 492, side.worldWidth, 192);
+    g.fillStyle(THEME.colors.hallB, 1);
+    for (let x = 0; x < side.worldWidth; x += 32) {
+      g.fillRect(x, 492, 16, 192);
+    }
+    g.lineStyle(2, THEME.colors.hallLine, 0.45);
+    for (let x = 0; x < side.worldWidth; x += 32) g.lineBetween(x, 492, x, 684);
+    for (let y = 492; y <= 684; y += 32) g.lineBetween(0, y, side.worldWidth, y);
+
+    for (let x = 120; x < side.worldWidth; x += 260) {
+      this.drawSidePoster(g, x, 424);
+      this.drawSideExtinguisher(g, x + 92, 438);
+    }
+
+    for (const room of side.backgroundRooms) {
+      this.drawSideRoom(g, room.x, 168, room.width, 246, room.label, room.kind, room.floor);
+    }
+
+    for (const transition of side.stairTransitions ?? []) {
+      this.drawSideStairs(g, transition.trigger, transition.toFloor);
+    }
+
+    this.add
+      .text(52, 124, `${side.initialFloor}F 廊下`, {
+        fontFamily: THEME.font,
+        fontSize: '20px',
+        color: '#2f2418',
+        backgroundColor: '#fff7d6',
+        padding: { x: 7, y: 3 }
+      })
+      .setDepth(5);
+  }
+
+  private drawSideRoom(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number, label: string, kind: RoomConfig['kind'], floor: number): void {
+    const color = this.getRoomColor({ kind, label, x, y, width, height, door: { x, y } });
+    g.fillStyle(color.base, 1);
+    g.fillRect(x, y, width, height);
+    g.lineStyle(4, THEME.colors.mapBorder, 1);
+    g.strokeRect(x, y, width, height);
+
+    g.fillStyle(color.dark, 1);
+    g.fillRect(x + 18, y + 26, width - 36, 34);
+    g.fillStyle(THEME.colors.window, 1);
+    for (let wx = x + 26; wx < x + width - 34; wx += 48) {
+      g.fillRect(wx, y + 78, 32, 34);
+      g.fillStyle(THEME.colors.windowLight, 0.8);
+      g.fillRect(wx + 6, y + 84, 12, 6);
+      g.fillStyle(THEME.colors.window, 1);
+    }
+
+    g.fillStyle(THEME.colors.door, 1);
+    g.fillRect(x + width - 42, y + height - 86, 30, 86);
+    g.fillStyle(0x3b2314, 1);
+    g.fillRect(x + width - 18, y + height - 44, 4, 4);
+
+    const deskColor = kind === 'science' ? 0x1f9e95 : kind === 'library' ? 0x8b5a2b : 0x9b6b35;
+    g.fillStyle(deskColor, 0.9);
+    for (let dx = x + 24; dx < x + width - 70; dx += 44) {
+      g.fillRect(dx, y + 150, 28, 18);
+      g.fillRect(dx, y + 188, 28, 18);
+    }
+
+    this.add
+      .text(x + 16, y + 12, `${floor}F ${label}`, {
+        fontFamily: THEME.font,
+        fontSize: '16px',
+        color: THEME.colors.plateText,
+        backgroundColor: '#fff7d6',
+        padding: { x: 5, y: 2 }
+      })
+      .setDepth(8);
+  }
+
+  private drawSidePoster(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.fillStyle(THEME.colors.board, 1);
+    g.fillRect(x, y, 72, 38);
+    g.lineStyle(3, THEME.colors.boardTrim, 1);
+    g.strokeRect(x, y, 72, 38);
+    g.fillStyle(0xfef3c7, 1);
+    g.fillRect(x + 8, y + 10, 44, 4);
+    g.fillRect(x + 8, y + 22, 56, 4);
+  }
+
+  private drawSideExtinguisher(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.fillStyle(THEME.colors.fireRed, 1);
+    g.fillRect(x, y, 12, 32);
+    g.fillStyle(0xfef2f2, 1);
+    g.fillRect(x + 3, y + 9, 6, 5);
+  }
+
+  private drawSideStairs(g: Phaser.GameObjects.Graphics, trigger: RectConfig, toFloor: number): void {
+    g.fillStyle(THEME.colors.stairsA, 1);
+    g.fillRect(trigger.x, 500, trigger.width, 150);
+    g.lineStyle(4, THEME.colors.goalFrame, 1);
+    g.strokeRect(trigger.x + 2, 500, trigger.width - 4, 150);
+    g.lineStyle(3, 0x4b5563, 0.9);
+    for (let y = 518; y < 640; y += 18) {
+      g.lineBetween(trigger.x + 10, y, trigger.x + trigger.width - 10, y);
+    }
+    this.add
+      .text(trigger.x + trigger.width / 2, 522, `階段\n${toFloor}Fへ`, {
+        fontFamily: THEME.font,
+        fontSize: '17px',
+        color: '#111827',
+        align: 'center',
+        backgroundColor: '#fff7d6',
+        padding: { x: 5, y: 3 }
+      })
+      .setOrigin(0.5)
+      .setDepth(8);
+  }
+
+  private createSideTeacher(config: SideScrollTeacherConfig, side: SideScrollConfig): SideTeacherRuntime {
+    const y = config.type === 'classroom_watch' ? side.floorY - 214 : side.floorY - 22;
+    const body = this.add.container(config.x, y).setDepth(config.type === 'classroom_watch' ? 28 : 45);
+    const shadow = this.add.ellipse(0, 18, 28, 9, 0x000000, 0.18);
+    const suit = this.add.rectangle(0, 2, 25, 34, THEME.colors.teacherSuit, 1).setStrokeStyle(3, 0xffffff, 0.75);
+    const face = this.add.rectangle(0, -20, 18, 15, THEME.colors.teacherFace, 1).setStrokeStyle(2, 0x5c321d, 0.8);
+    const hair = this.add.rectangle(0, -27, 18, 5, 0x292524, 1);
+    const label = this.add
+      .text(0, 2, '先生', {
+        fontFamily: THEME.font,
+        fontSize: '10px',
+        color: '#ffffff',
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5);
+    body.add([shadow, suit, face, hair, label]);
+
+    return {
+      config,
+      x: config.x,
+      direction: config.direction,
+      state: config.type === 'classroom_watch' ? 'hidden' : 'active',
+      elapsed: 0,
+      body,
+      vision: this.add.graphics().setDepth(24)
+    };
+  }
+
+  private updateSideTeachers(delta: number, side: SideScrollConfig): void {
+    for (const teacher of this.sideTeachers) {
+      teacher.vision.clear();
+      teacher.activeVision = undefined;
+      teacher.warningVision = undefined;
+
+      if (teacher.config.type === 'hallway_patrol') {
+        this.updateSidePatrolTeacher(teacher, delta);
+        teacher.activeVision = this.createSideVisionRect(teacher.x, side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
+      } else if (teacher.config.type === 'hallway_static') {
+        teacher.activeVision = this.createSideVisionRect(teacher.x, side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
+      } else {
+        this.updateSideClassroomWatchTeacher(teacher, delta, side);
+      }
+
+      teacher.body.setX(teacher.x);
+      teacher.body.setScale(teacher.direction === 'left' ? -1 : 1, 1);
+      if (teacher.config.floor !== this.currentFloor) {
+        teacher.body.setAlpha(0.35);
+        continue;
+      }
+      teacher.body.setAlpha(1);
+      if (teacher.warningVision) this.drawSideVision(teacher.vision, teacher.warningVision, THEME.colors.warningVision, 0.34);
+      if (teacher.activeVision) this.drawSideVision(teacher.vision, teacher.activeVision, THEME.colors.dangerVision, 0.38);
+    }
+  }
+
+  private updateSidePatrolTeacher(teacher: SideTeacherRuntime, delta: number): void {
+    const minX = teacher.config.patrolMinX ?? teacher.config.x - 120;
+    const maxX = teacher.config.patrolMaxX ?? teacher.config.x + 120;
+    const speed = teacher.config.speed ?? 48;
+    teacher.x += (teacher.direction === 'right' ? 1 : -1) * speed * (delta / 1000);
+    if (teacher.x >= maxX) {
+      teacher.x = maxX;
+      teacher.direction = 'left';
+    } else if (teacher.x <= minX) {
+      teacher.x = minX;
+      teacher.direction = 'right';
+    }
+  }
+
+  private updateSideClassroomWatchTeacher(teacher: SideTeacherRuntime, delta: number, side: SideScrollConfig): void {
+    teacher.elapsed += delta;
+    const hiddenMs = teacher.config.hiddenMs ?? 2200;
+    const warningMs = teacher.config.warningMs ?? 900;
+    const watchingMs = teacher.config.watchingMs ?? 1500;
+    const duration = teacher.state === 'hidden' ? hiddenMs : teacher.state === 'warning' ? warningMs : watchingMs;
+    if (teacher.elapsed >= duration) {
+      teacher.elapsed = 0;
+      teacher.state = teacher.state === 'hidden' ? 'warning' : teacher.state === 'warning' ? 'watching' : 'hidden';
+    }
+
+    const rect = this.createSideVisionRect(teacher.x, side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
+    if (teacher.state === 'warning') teacher.warningVision = rect;
+    if (teacher.state === 'watching') teacher.activeVision = rect;
+  }
+
+  private createSideVisionRect(x: number, floorY: number, direction: SideScrollDirection, width: number, height: number): Phaser.Geom.Rectangle {
+    const rectX = direction === 'right' ? x + 20 : x - width - 20;
+    return new Phaser.Geom.Rectangle(rectX, floorY - height, width, height);
+  }
+
+  private drawSideVision(g: Phaser.GameObjects.Graphics, rect: Phaser.Geom.Rectangle, color: number, alpha: number): void {
+    g.fillStyle(color, alpha);
+    g.fillRectShape(rect);
+    g.lineStyle(3, 0xffedd5, 0.68);
+    g.strokeRectShape(rect);
+  }
+
+  private isPointInSideTeacherVision(point: Phaser.Math.Vector2): boolean {
+    return this.sideTeachers.some((teacher) => teacher.config.floor === this.currentFloor && teacher.activeVision && Phaser.Geom.Rectangle.Contains(teacher.activeVision, point.x, point.y - 12));
+  }
+
+  private isNearSideTeacherVision(point: Phaser.Math.Vector2, padding: number): boolean {
+    return this.sideTeachers.some((teacher) => {
+      if (teacher.config.floor !== this.currentFloor || !teacher.activeVision) return false;
+      const rect = Phaser.Geom.Rectangle.Clone(teacher.activeVision);
+      rect.x -= padding;
+      rect.y -= padding;
+      rect.width += padding * 2;
+      rect.height += padding * 2;
+      return Phaser.Geom.Rectangle.Contains(rect, point.x, point.y - 12);
+    });
+  }
+
+  private findSideStairTransition(side: SideScrollConfig, x: number, y: number): StairTransitionConfig | undefined {
+    return side.stairTransitions?.find(
+      (transition) => transition.fromFloor === this.currentFloor && x >= transition.trigger.x - 90 && x <= transition.trigger.x + transition.trigger.width + 40 && y >= 0
+    );
+  }
+
   private finish(cleared: boolean, reason?: string): void {
     this.finished = true;
     if (cleared) {
@@ -166,7 +507,10 @@ export class GameScene extends Phaser.Scene {
         volume.text.setText(`音量 ${this.soundEnabled ? 'ON' : 'OFF'}`);
       });
       const resume = this.createPauseButton(558, 'ゲームに戻る', () => this.togglePause(), 0xfde68a);
-      this.pauseOverlay = this.add.container(0, 0, [dim, panel, label, retry.rect, retry.text, map.rect, map.text, title.rect, title.text, volume.rect, volume.text, resume.rect, resume.text]).setDepth(1200);
+      this.pauseOverlay = this.add
+        .container(0, 0, [dim, panel, label, retry.rect, retry.text, map.rect, map.text, title.rect, title.text, volume.rect, volume.text, resume.rect, resume.text])
+        .setDepth(1200)
+        .setScrollFactor(0);
     } else {
       this.pauseOverlay?.destroy(true);
       this.pauseOverlay = undefined;
@@ -246,7 +590,9 @@ export class GameScene extends Phaser.Scene {
     };
     button.on('pointerup', close);
     dim.setInteractive();
-    this.tutorialOverlay = this.add.container(0, 0, [dim, panel, title, body, button, buttonText]).setDepth(1400);
+    dim.on('pointerup', close);
+    this.input.once('pointerdown', close);
+    this.tutorialOverlay = this.add.container(0, 0, [dim, panel, title, body, button, buttonText]).setDepth(1400).setScrollFactor(0);
   }
 
   private getIntroLines(): string[] {
@@ -567,8 +913,8 @@ export class GameScene extends Phaser.Scene {
     this.wasDashing = false;
     this.updateDangerFrame(false);
 
-    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1).setAlpha(0).setScrollFactor(0);
-    const panel = this.add.rectangle(GAME_WIDTH / 2, 382, 318, 182, THEME.colors.uiPanel, 1).setAlpha(0).setStrokeStyle(5, THEME.colors.uiBorder, 1);
+    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.82).setScrollFactor(0);
+    const panel = this.add.rectangle(GAME_WIDTH / 2, 382, 318, 182, THEME.colors.uiPanel, 0.98).setStrokeStyle(5, THEME.colors.uiBorder, 1).setScrollFactor(0);
     const label = this.add
       .text(GAME_WIDTH / 2, 356, transition.label, {
         fontFamily: THEME.font,
@@ -580,7 +926,6 @@ export class GameScene extends Phaser.Scene {
         align: 'center'
       })
       .setOrigin(0.5)
-      .setAlpha(0)
       .setScrollFactor(0);
     const sub = this.add
       .text(GAME_WIDTH / 2, 414, `${transition.fromFloor}F → ${transition.toFloor}F`, {
@@ -592,46 +937,25 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 4
       })
       .setOrigin(0.5)
-      .setAlpha(0)
       .setScrollFactor(0);
-    const overlay = this.add.container(0, 0, [dim, panel, label, sub]).setDepth(1600);
+    const overlay = this.add.container(0, 0, [dim, panel, label, sub]).setDepth(1600).setScrollFactor(0);
 
-    this.tweens.add({
-      targets: [dim],
-      alpha: 0.82,
-      duration: 220,
-      ease: 'Quad.easeOut'
-    });
-    this.tweens.add({
-      targets: [panel],
-      alpha: 0.98,
-      duration: 220,
-      ease: 'Quad.easeOut'
-    });
-    this.tweens.add({
-      targets: [label, sub],
-      alpha: 1,
-      duration: 180,
-      delay: 100,
-      onComplete: () => {
-        this.time.delayedCall(380, () => {
-          this.player.setPosition(transition.destinationSpawn.x, transition.destinationSpawn.y);
-          this.currentFloor = transition.toFloor;
-          this.hud.setFloor(this.getFloorLabel(this.currentFloor));
-          this.stairNoticeShown = false;
+    this.time.delayedCall(700, () => {
+      this.player.setPosition(transition.destinationSpawn.x, transition.destinationSpawn.y);
+      this.currentFloor = transition.toFloor;
+      this.hud.setFloor(this.getFloorLabel(this.currentFloor));
+      this.stairNoticeShown = false;
 
-          this.tweens.add({
-            targets: overlay,
-            alpha: 0,
-            duration: 260,
-            delay: 220,
-            onComplete: () => {
-              overlay.destroy(true);
-              this.isFloorTransitioning = false;
-            }
-          });
-        });
-      }
+      this.tweens.add({
+        targets: overlay,
+        alpha: 0,
+        duration: 260,
+        delay: 220,
+        onComplete: () => {
+          overlay.destroy(true);
+          this.isFloorTransitioning = false;
+        }
+      });
     });
   }
 
