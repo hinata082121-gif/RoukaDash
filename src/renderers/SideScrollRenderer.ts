@@ -1,25 +1,35 @@
 import Phaser from 'phaser';
-import { SIDE_VISUAL, THEME } from '../config/visualTheme';
+import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
+import { SIDE_LAYOUT, SIDE_VISUAL, THEME } from '../config/visualTheme';
 import type { RectConfig, RoomKind } from '../types/LevelTypes';
-import type { SideScrollConfig, SideScrollRoomConfig } from '../types/SideScrollTypes';
+import type { SideScrollConfig, SideScrollMetrics, SideScrollRoomConfig } from '../types/SideScrollTypes';
+import { buildSideScrollMetrics } from '../utils/sideScrollMetrics';
 
 type RoomPalette = { wall: number; dark: number; floor: number; accent: number };
 
 export class SideScrollRenderer {
-  static render(scene: Phaser.Scene, side: SideScrollConfig): void {
-    const renderer = new SideScrollRenderer(scene, side);
+  static render(scene: Phaser.Scene, side: SideScrollConfig, metrics = buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT)): void {
+    const renderer = new SideScrollRenderer(scene, side, metrics);
     renderer.render();
   }
 
-  private readonly roomY = SIDE_VISUAL.classroomY;
-  private readonly roomHeight = SIDE_VISUAL.classroomHeight;
-  private readonly windowOffsetY = SIDE_VISUAL.classroomWindowY;
-  private readonly windowHeight = SIDE_VISUAL.classroomWindowHeight;
-  private readonly floorTopY = SIDE_VISUAL.floorTopY;
-  private readonly floorBottomY = SIDE_VISUAL.floorBottomY;
-  private readonly hallwayBackY = SIDE_VISUAL.hallwayBackY;
+  private readonly roomY: number;
+  private readonly roomHeight: number;
+  private readonly windowOffsetY: number;
+  private readonly windowHeight: number;
+  private readonly floorTopY: number;
+  private readonly floorBottomY: number;
+  private readonly hallwayBackY: number;
 
-  private constructor(private scene: Phaser.Scene, private side: SideScrollConfig) {}
+  private constructor(private scene: Phaser.Scene, private side: SideScrollConfig, private metrics: SideScrollMetrics) {
+    this.roomY = metrics.transomTopY;
+    this.roomHeight = metrics.sillY - metrics.transomTopY + 44;
+    this.windowOffsetY = metrics.windowTopY - metrics.transomTopY;
+    this.windowHeight = metrics.windowBottomY - metrics.windowTopY;
+    this.floorTopY = metrics.hallBackY + 16;
+    this.floorBottomY = metrics.floorBottomY;
+    this.hallwayBackY = metrics.hallBackY;
+  }
 
   private render(): void {
     const g = this.scene.add.graphics().setDepth(1);
@@ -54,9 +64,9 @@ export class SideScrollRenderer {
 
   private drawBackgroundWall(g: Phaser.GameObjects.Graphics): void {
     g.fillStyle(0xf8f0dd, 1);
-    g.fillRect(0, 108, this.side.worldWidth, this.hallwayBackY - 108);
+    g.fillRect(0, this.metrics.ceilingY, this.side.worldWidth, this.hallwayBackY - this.metrics.ceilingY);
     g.fillStyle(0xe4d1ad, 1);
-    g.fillRect(0, 108, this.side.worldWidth, 34);
+    g.fillRect(0, this.metrics.ceilingY, this.side.worldWidth, 34);
     g.fillStyle(0xd7c09b, 1);
     g.fillRect(0, this.hallwayBackY - 18, this.side.worldWidth, 18);
     g.lineStyle(5, 0xa88b62, 0.85);
@@ -69,8 +79,8 @@ export class SideScrollRenderer {
     const palette = this.getRoomPalette(room.kind);
     const x = room.x;
     const y = this.roomY;
-    const width = room.width;
     const height = this.roomHeight;
+    const width = this.getFacadeWidth(room);
     g.fillStyle(palette.wall, 1);
     g.fillRect(x, y, width, height);
     g.lineStyle(3, THEME.colors.mapBorder, 0.48);
@@ -80,9 +90,9 @@ export class SideScrollRenderer {
     g.lineBetween(x + 4, y + 5, x + width - 4, y + 5);
 
     g.fillStyle(palette.floor, 1);
-    g.fillRect(x + 8, y + 128, width - 16, height - 136);
+    g.fillRect(x + 8, this.metrics.sillY + 10, width - 16, Math.max(26, y + height - this.metrics.sillY - 18));
     g.lineStyle(2, 0xb58e5f, 0.28);
-    for (let floorLineY = y + 148; floorLineY < y + height - 10; floorLineY += 24) {
+    for (let floorLineY = this.metrics.sillY + 24; floorLineY < y + height - 10; floorLineY += 24) {
       g.lineBetween(x + 10, floorLineY, x + width - 10, floorLineY);
     }
 
@@ -93,65 +103,69 @@ export class SideScrollRenderer {
   private drawClassroomMid(g: Phaser.GameObjects.Graphics, room: SideScrollRoomConfig): void {
     const x = room.x;
     const y = this.roomY;
-    const width = room.width;
+    const width = this.getFacadeWidth(room);
     const kind = room.kind;
 
     if (kind === 'science') {
       this.drawExperimentTables(g, x, y, width);
-      this.drawStandingStudent(g, x + 74, y + 154, 0x8dd7c7, 0.78);
-      this.drawTeacherSilhouette(g, x + width - 92, y + 156, 0xf7f7f7);
+      this.drawStandingStudent(g, x + 128, this.metrics.sillY - 12, 0x8dd7c7, 0.78);
+      this.drawTeacherSilhouette(g, x + width - 120, this.metrics.sillY - 8, 0xf7f7f7);
     } else if (kind === 'music') {
-      this.drawPiano(g, x + 26, y + 148);
-      this.drawMusicStands(g, x + 112, y + 140);
-      this.drawSeatedStudent(g, x + 142, y + 170, 0x71c562);
+      this.drawPiano(g, x + 52, this.metrics.sillY - 20);
+      this.drawMusicStands(g, x + 172, this.metrics.sillY - 28);
+      this.drawSeatedStudent(g, x + 238, this.metrics.sillY + 14, 0x71c562);
     } else if (kind === 'library') {
-      this.drawReadingTable(g, x + 42, y + 160, width - 112);
-      this.drawSeatedStudent(g, x + 78, y + 174, 0x4f9ad8);
-      this.drawSeatedStudent(g, x + 132, y + 174, 0xf59e0b);
+      this.drawReadingTable(g, x + 70, this.metrics.sillY + 4, width - 180);
+      this.drawSeatedStudent(g, x + 126, this.metrics.sillY + 18, 0x4f9ad8);
+      this.drawSeatedStudent(g, x + 214, this.metrics.sillY + 18, 0xf59e0b);
     } else if (kind === 'nurse') {
-      this.drawNurseBed(g, x + 24, y + 154);
-      this.drawTeacherSilhouette(g, x + width - 80, y + 162, 0xffffff);
+      this.drawNurseBed(g, x + 58, this.metrics.sillY - 2);
+      this.drawTeacherSilhouette(g, x + width - 126, this.metrics.sillY + 8, 0xffffff);
     } else if (kind === 'staff') {
-      for (let deskX = x + 22; deskX < x + width - 82; deskX += 42) {
-        this.drawOfficeDesk(g, deskX, y + 150);
+      for (let deskX = x + 44; deskX < x + width - 140; deskX += 74) {
+        this.drawOfficeDesk(g, deskX, this.metrics.sillY - 4);
       }
-      this.drawTeacherSilhouette(g, x + 74, y + 172, THEME.colors.teacherSuit);
-      this.drawTeacherSilhouette(g, x + width - 96, y + 172, THEME.colors.teacherSuit);
+      this.drawTeacherSilhouette(g, x + 120, this.metrics.sillY + 20, THEME.colors.teacherSuit);
+      this.drawTeacherSilhouette(g, x + width - 144, this.metrics.sillY + 20, THEME.colors.teacherSuit);
     } else if (kind === 'storage' || room.label.includes('玄関') || room.label.includes('下駄箱')) {
-      this.drawShoeBoxes(g, x + 26, y + 126, Math.max(4, Math.floor((width - 70) / 24)));
+      this.drawShoeBoxes(g, x + 38, this.metrics.windowTopY + 6, Math.max(8, Math.floor((width - 90) / 28)));
     } else {
       this.drawClassroomDesks(g, x, y, width);
-      this.drawSeatedStudent(g, x + 58, y + 168, 0x4f9ad8);
-      if (width > 175) this.drawSeatedStudent(g, x + 110, y + 168, 0xf59e0b);
-      if (width > 205) this.drawStandingStudent(g, x + 148, y + 158, 0x71c562, 0.78);
-      this.drawTeacherDesk(g, x + width - 92, y + 142);
+      this.drawSeatedStudent(g, x + 108, this.metrics.sillY + 12, 0x4f9ad8);
+      this.drawSeatedStudent(g, x + 194, this.metrics.sillY + 12, 0xf59e0b);
+      this.drawStandingStudent(g, x + 286, this.metrics.sillY - 8, 0x71c562, 0.78);
+      this.drawTeacherDesk(g, x + width - 150, this.metrics.sillY - 16);
     }
   }
 
   private drawWindowFront(g: Phaser.GameObjects.Graphics, room: SideScrollRoomConfig): void {
     const x = room.x;
     const y = this.roomY;
-    const width = room.width;
+    const width = this.getFacadeWidth(room);
     const height = this.roomHeight;
-    const doorX = x + width - 44;
+    const doorWidth = Phaser.Math.Clamp(this.metrics.doorPairWidthPx, 154, 173);
+    const doorX = x + width - doorWidth - 18;
 
     g.fillStyle(THEME.colors.door, 1);
-    g.fillRect(doorX, y + 78, 34, 126);
+    g.fillRect(doorX, this.metrics.transomTopY + 50, doorWidth, height - 50);
     g.lineStyle(4, THEME.colors.doorDark, 0.85);
-    g.strokeRect(doorX, y + 78, 34, 126);
+    g.strokeRect(doorX, this.metrics.transomTopY + 50, doorWidth, height - 50);
+    g.lineBetween(doorX + doorWidth / 2, this.metrics.transomTopY + 54, doorX + doorWidth / 2, y + height - 4);
     g.fillStyle(THEME.colors.windowLight, 0.78);
-    g.fillRect(doorX + 7, y + 94, 18, 26);
+    g.fillRect(doorX + 16, this.metrics.windowTopY + 14, 36, 34);
+    g.fillRect(doorX + doorWidth - 54, this.metrics.windowTopY + 14, 36, 34);
     g.fillStyle(0x3b2314, 1);
-    g.fillRect(doorX + 25, y + 146, 4, 4);
+    g.fillRect(doorX + doorWidth / 2 - 8, this.metrics.sillY + 38, 5, 5);
+    g.fillRect(doorX + doorWidth / 2 + 6, this.metrics.sillY + 38, 5, 5);
 
-    const visibleWidth = Math.max(84, width - 74);
+    const visibleWidth = Math.min(Math.max(360, this.metrics.windowBandWidthPx), Math.max(84, doorX - x - 34));
     g.fillStyle(0xb9dbe7, 0.26);
     g.fillRect(x + 18, y + this.windowOffsetY, visibleWidth, this.windowHeight);
     g.lineStyle(4, 0x35505a, 0.88);
     g.strokeRect(x + 18, y + this.windowOffsetY, visibleWidth, this.windowHeight);
     g.lineStyle(3, 0x35505a, 0.78);
     g.lineBetween(x + 18, y + this.windowOffsetY + this.windowHeight / 2, x + visibleWidth + 18, y + this.windowOffsetY + this.windowHeight / 2);
-    for (let sashX = x + 66; sashX < x + visibleWidth + 8; sashX += 48) {
+    for (let sashX = x + 72; sashX < x + visibleWidth + 8; sashX += 72) {
       g.lineBetween(sashX, y + this.windowOffsetY + 2, sashX, y + this.windowOffsetY + this.windowHeight - 2);
     }
 
@@ -160,22 +174,22 @@ export class SideScrollRenderer {
     g.fillRect(x + visibleWidth + 6, y + this.windowOffsetY - 4, 10, this.windowHeight + 10);
     g.fillStyle(0xe8fbff, 0.62);
     g.fillTriangle(x + 34, y + this.windowOffsetY + 10, x + 92, y + this.windowOffsetY + 10, x + 34, y + this.windowOffsetY + 42);
-    g.fillTriangle(x + 76, y + this.windowOffsetY + 58, x + 128, y + this.windowOffsetY + 58, x + 76, y + this.windowOffsetY + 86);
+    g.fillTriangle(x + 112, y + this.windowOffsetY + this.windowHeight - 36, x + 190, y + this.windowOffsetY + this.windowHeight - 36, x + 112, y + this.windowOffsetY + this.windowHeight - 8);
     g.fillStyle(0x2f2418, 0.18);
     g.fillRect(x + 18, y + this.windowOffsetY + this.windowHeight - 8, visibleWidth, 8);
   }
 
   private drawCorridorBack(g: Phaser.GameObjects.Graphics): void {
     for (let x = 112; x < this.side.worldWidth; x += 260) {
-      this.drawPoster(g, x, 392);
-      this.drawExtinguisher(g, x + 98, 426);
-      this.drawUmbrellaStand(g, x + 158, 430);
+      this.drawPoster(g, x, this.hallwayBackY - 38);
+      this.drawExtinguisher(g, x + 98, this.hallwayBackY - 4);
+      this.drawUmbrellaStand(g, x + 158, this.hallwayBackY);
     }
     for (let x = 330; x < this.side.worldWidth; x += 520) {
-      this.drawCleaningCloset(g, x, 376);
+      this.drawCleaningCloset(g, x, this.hallwayBackY - 54);
     }
     for (let x = 220; x < this.side.worldWidth; x += 620) {
-      this.drawMotto(g, x, 128);
+      this.drawMotto(g, x, this.metrics.ceilingY + 20);
     }
   }
 
@@ -185,10 +199,10 @@ export class SideScrollRenderer {
     const floorLeftAt = (y: number) => Phaser.Math.Linear(topInset, bottomOutset, (y - this.floorTopY) / (this.floorBottomY - this.floorTopY));
     const floorRightAt = (y: number) => Phaser.Math.Linear(this.side.worldWidth - topInset, this.side.worldWidth - bottomOutset, (y - this.floorTopY) / (this.floorBottomY - this.floorTopY));
     const floorBands = [
-      { y1: this.floorTopY, y2: 512, color: 0xd5b16e },
-      { y1: 512, y2: 560, color: 0xdfbf79 },
-      { y1: 560, y2: 618, color: 0xe8cd8d },
-      { y1: 618, y2: this.floorBottomY, color: 0xf0d99f }
+      { y1: this.floorTopY, y2: this.floorTopY + 42, color: 0xd5b16e },
+      { y1: this.floorTopY + 42, y2: this.floorTopY + 90, color: 0xdfbf79 },
+      { y1: this.floorTopY + 90, y2: this.metrics.walkY, color: 0xe8cd8d },
+      { y1: this.metrics.walkY, y2: this.floorBottomY, color: 0xf0d99f }
     ];
     for (const band of floorBands) {
       g.fillStyle(band.color, 1);
@@ -204,21 +218,21 @@ export class SideScrollRenderer {
     }
 
     g.lineStyle(3, THEME.colors.hallLine, 0.42);
-    for (const y of [500, 536, 580, 632, 684]) {
+    for (const y of [this.floorTopY + 30, this.floorTopY + 68, this.floorTopY + 112, this.metrics.walkY, this.floorBottomY]) {
       g.lineBetween(floorLeftAt(y), y, floorRightAt(y), y);
     }
     g.lineStyle(2, THEME.colors.hallLine, 0.22);
     for (let x = 80; x < this.side.worldWidth; x += 180) {
-      g.lineBetween(x, this.floorTopY, x - 84, this.floorBottomY);
-      g.lineBetween(x + 90, this.floorTopY, x + 156, this.floorBottomY);
+      g.lineBetween(x, this.floorTopY, x - 76, this.floorBottomY);
+      g.lineBetween(x + 90, this.floorTopY, x + 142, this.floorBottomY);
     }
     g.lineStyle(5, THEME.colors.hallWax, 0.34);
     for (let x = 54; x < this.side.worldWidth; x += 270) {
-      g.lineBetween(x, 530, x + 116, 520);
-      g.lineBetween(x + 38, 652, x + 178, 636);
+      g.lineBetween(x, this.floorTopY + 74, x + 116, this.floorTopY + 64);
+      g.lineBetween(x + 38, this.metrics.walkY + 32, x + 178, this.metrics.walkY + 16);
     }
     g.lineStyle(4, 0xfff3c4, 0.46);
-    g.lineBetween(0, this.side.floorY + 20, this.side.worldWidth, this.side.floorY + 20);
+    g.lineBetween(0, this.metrics.walkY + 20, this.side.worldWidth, this.metrics.walkY + 20);
     g.fillStyle(THEME.colors.hallwayShadow, 0.12);
     g.fillRect(0, this.floorBottomY - 12, this.side.worldWidth, 30);
   }
@@ -326,38 +340,40 @@ export class SideScrollRenderer {
 
   private drawClassroomDesks(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number): void {
     for (let row = 0; row < 2; row += 1) {
-      for (let deskX = x + 28; deskX < x + width - 84; deskX += 46) {
-        const deskY = y + 136 + row * 30;
+      for (let deskX = x + 42; deskX < x + width - 180; deskX += 86) {
+        const deskY = this.metrics.sillY - 10 + row * 42;
         g.fillStyle(0x7c4a24, 0.95);
-        g.fillRect(deskX, deskY + 12, 30, 8);
+        g.fillRect(deskX, deskY + this.metrics.deskHeightPx - 8, this.metrics.deskWidthPx, 8);
         g.fillStyle(0xa86934, 1);
-        g.fillRect(deskX, deskY, 30, 18);
+        g.fillRect(deskX, deskY, this.metrics.deskWidthPx, this.metrics.deskHeightPx);
       }
     }
   }
 
   private drawExperimentTables(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number): void {
-    for (let tableX = x + 28; tableX < x + width - 92; tableX += 70) {
+    for (let tableX = x + 44; tableX < x + width - 150; tableX += 118) {
       g.fillStyle(0x177f78, 1);
-      g.fillRect(tableX, y + 142, 54, 24);
+      g.fillRect(tableX, this.metrics.sillY - 8, this.metrics.deskWidthPx + 26, this.metrics.deskHeightPx);
       g.fillStyle(0xe8fbff, 0.92);
-      g.fillTriangle(tableX + 12, y + 126, tableX + 4, y + 154, tableX + 22, y + 154);
-      g.fillRect(tableX + 34, y + 130, 12, 26);
+      g.fillTriangle(tableX + 16, this.metrics.sillY - 28, tableX + 6, this.metrics.sillY + 2, tableX + 28, this.metrics.sillY + 2);
+      g.fillRect(tableX + 46, this.metrics.sillY - 24, 14, 28);
     }
   }
 
   private drawSeatedStudent(g: Phaser.GameObjects.Graphics, x: number, y: number, color: number): void {
     const scale = SIDE_VISUAL.studentScaleClassroomSitting;
+    const deskWidth = this.metrics.deskWidthPx;
+    const visibleHeight = this.metrics.seatedStudentVisibleHeightPx * 0.42;
     g.fillStyle(0x000000, 0.12);
-    g.fillEllipse(x, y + 16, 20 * scale, 6 * scale);
+    g.fillEllipse(x, y + 18, 26 * scale, 7 * scale);
     g.fillStyle(THEME.colors.playerFace, 0.98);
-    g.fillRect(x - 6 * scale, y - 18 * scale, 12 * scale, 11 * scale);
+    g.fillRect(x - 7 * scale, y - visibleHeight * 0.62, 14 * scale, 13 * scale);
     g.fillStyle(0x2d1c14, 1);
-    g.fillRect(x - 6 * scale, y - 22 * scale, 12 * scale, 4 * scale);
+    g.fillRect(x - 7 * scale, y - visibleHeight * 0.72, 14 * scale, 5 * scale);
     g.fillStyle(color, 0.96);
-    g.fillRect(x - 8 * scale, y - 6 * scale, 16 * scale, 16 * scale);
+    g.fillRect(x - 10 * scale, y - visibleHeight * 0.34, 20 * scale, 22 * scale);
     g.fillStyle(0xa86934, 1);
-    g.fillRect(x - 18 * scale, y + 4 * scale, 36 * scale, 14 * scale);
+    g.fillRect(x - deskWidth / 2, y + 4 * scale, deskWidth, this.metrics.deskHeightPx * 0.56);
   }
 
   private drawStandingStudent(g: Phaser.GameObjects.Graphics, x: number, y: number, color: number, alpha = 0.9): void {
@@ -549,6 +565,11 @@ export class SideScrollRenderer {
         padding: { x: 5, y: 2 }
       })
       .setDepth(8);
+  }
+
+  private getFacadeWidth(room: SideScrollRoomConfig): number {
+    const compressedModuleWidth = Math.min(this.metrics.classroomModuleWidthPx, 640);
+    return Math.max(room.width, compressedModuleWidth);
   }
 
   private getRoomPalette(kind: RoomKind): RoomPalette {

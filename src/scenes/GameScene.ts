@@ -1,19 +1,20 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 import { DEBUG_MODE } from '../config/releaseConfig';
-import { SIDE_VISUAL, THEME } from '../config/visualTheme';
+import { SIDE_LAYOUT, SIDE_VISUAL, THEME } from '../config/visualTheme';
 import { Goal } from '../entities/Goal';
 import { Player } from '../entities/Player';
 import { Student } from '../entities/Student';
 import { Teacher } from '../entities/Teacher';
 import { SideScrollRenderer } from '../renderers/SideScrollRenderer';
 import type { LevelConfig, MapPropConfig, RectConfig, RoomConfig, StairTransitionConfig } from '../types/LevelTypes';
-import type { SideScrollConfig, SideScrollDirection, SideScrollTeacherConfig, SideScrollTeacherState } from '../types/SideScrollTypes';
+import type { SideScrollConfig, SideScrollDirection, SideScrollMetrics, SideScrollTeacherConfig, SideScrollTeacherState } from '../types/SideScrollTypes';
 import { Hud } from '../ui/Hud';
 import { InputManager } from '../systems/InputManager';
 import { LevelManager } from '../systems/LevelManager';
 import { ProgressManager } from '../systems/ProgressManager';
 import { VisionSystem } from '../systems/VisionSystem';
+import { buildSideScrollMetrics } from '../utils/sideScrollMetrics';
 
 interface SideTeacherRuntime {
   config: SideScrollTeacherConfig;
@@ -54,6 +55,7 @@ export class GameScene extends Phaser.Scene {
   private sideScroll?: SideScrollConfig;
   private sideTeachers: SideTeacherRuntime[] = [];
   private sideGoalX = 0;
+  private sideMetrics?: SideScrollMetrics;
 
   constructor() {
     super('GameScene');
@@ -161,15 +163,17 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, side.worldWidth, GAME_HEIGHT);
     this.debugEnabled = this.shouldEnableDebug();
     this.sideGoalX = side.goalX;
+    this.sideMetrics = buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT);
+    const walkY = this.sideMetrics.walkY;
 
-    SideScrollRenderer.render(this, side);
-    this.goal = new Goal(this, side.goalX - 26, side.floorY - 86, 64, 82, this.level.goalLabel);
-    this.player = new Player(this, side.startX, side.floorY);
+    SideScrollRenderer.render(this, side, this.sideMetrics);
+    this.goal = new Goal(this, side.goalX - 26, walkY - 86, 64, 82, this.level.goalLabel);
+    this.player = new Player(this, side.startX, walkY);
     this.player.setDepth(50);
     this.sideTeachers = side.teachers.map((teacher) => this.createSideTeacher(teacher, side));
     side.students.forEach((student) => {
       const isClassroom = student.layer === 'classroom';
-      const y = isClassroom ? side.floorY - 210 : side.floorY - 20;
+      const y = isClassroom ? this.sideMetrics!.sillY + 12 : walkY - 20;
       const sprite = new Student(this, student.x, y, student.color, isClassroom ? SIDE_VISUAL.studentScaleClassroomStanding : SIDE_VISUAL.studentScaleHallway, isClassroom ? 27 : 43);
       if (isClassroom) sprite.setAlpha(0.86);
     });
@@ -202,7 +206,8 @@ export class GameScene extends Phaser.Scene {
     this.remainingMs -= delta;
     this.hud.setTime(this.remainingMs / 1000);
 
-    this.player.updateSideScroll(input, delta, side.floorY, 40, side.worldWidth - 40);
+    const walkY = this.sideMetrics?.walkY ?? side.floorY;
+    this.player.updateSideScroll(input, delta, walkY, 40, side.worldWidth - 40);
     const position = this.player.getPositionVector();
 
     const stairTransition = this.findSideStairTransition(side, position.x, position.y);
@@ -213,7 +218,7 @@ export class GameScene extends Phaser.Scene {
 
     this.updateSideTeachers(delta, side);
     const isInTeacherVision = this.isPointInSideTeacherVision(position);
-    this.hud.setGoalDirection(position, new Phaser.Math.Vector2(this.sideGoalX, side.floorY - 56));
+    this.hud.setGoalDirection(position, new Phaser.Math.Vector2(this.sideGoalX, walkY - 56));
     this.updateDangerFrame(input.isDashing && this.isNearSideTeacherVision(position, 44));
     this.updateDebugOverlay(input.isDashing, isInTeacherVision, input.inputSource);
 
@@ -526,8 +531,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createSideTeacher(config: SideScrollTeacherConfig, side: SideScrollConfig): SideTeacherRuntime {
-    const classroomPeekY = SIDE_VISUAL.classroomY + SIDE_VISUAL.classroomWindowY + SIDE_VISUAL.classroomWindowHeight - 8;
-    const y = config.type === 'classroom_watch' ? classroomPeekY : side.floorY - 22;
+    const metrics = this.sideMetrics ?? buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT);
+    const classroomPeekY = metrics.windowBottomY - 8;
+    const y = config.type === 'classroom_watch' ? classroomPeekY : metrics.walkY - 22;
     const visualScale = config.type === 'classroom_watch' ? SIDE_VISUAL.teacherScaleClassroom : SIDE_VISUAL.teacherScaleHallway;
     const body = this.add.container(config.x, y).setDepth(config.type === 'classroom_watch' ? 28 : 45);
     const shadow = this.add.ellipse(0, 21, 34, 11, 0x000000, config.type === 'classroom_watch' ? 0.08 : 0.2);
@@ -568,9 +574,9 @@ export class GameScene extends Phaser.Scene {
 
       if (teacher.config.type === 'hallway_patrol') {
         this.updateSidePatrolTeacher(teacher, delta);
-        teacher.activeVision = this.createSideVisionRect(teacher.x, side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
+        teacher.activeVision = this.createSideVisionRect(teacher.x, this.sideMetrics?.walkY ?? side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
       } else if (teacher.config.type === 'hallway_static') {
-        teacher.activeVision = this.createSideVisionRect(teacher.x, side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
+        teacher.activeVision = this.createSideVisionRect(teacher.x, this.sideMetrics?.walkY ?? side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
       } else {
         this.updateSideClassroomWatchTeacher(teacher, delta, side);
       }
@@ -582,7 +588,8 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       if (teacher.config.type === 'classroom_watch') {
-        const baseY = SIDE_VISUAL.classroomY + SIDE_VISUAL.classroomWindowY + SIDE_VISUAL.classroomWindowHeight - 8;
+        const metrics = this.sideMetrics ?? buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT);
+        const baseY = metrics.windowBottomY - 8;
         const isWatching = teacher.state === 'watching';
         const isWarning = teacher.state === 'warning';
         teacher.body.setY(baseY + (teacher.state === 'hidden' ? 22 : isWarning ? 9 : 0));
@@ -620,7 +627,7 @@ export class GameScene extends Phaser.Scene {
       teacher.state = teacher.state === 'hidden' ? 'warning' : teacher.state === 'warning' ? 'watching' : 'hidden';
     }
 
-    const rect = this.createSideVisionRect(teacher.x, side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
+    const rect = this.createSideVisionRect(teacher.x, this.sideMetrics?.walkY ?? side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
     if (teacher.state === 'warning') teacher.warningVision = rect;
     if (teacher.state === 'watching') teacher.activeVision = rect;
   }
@@ -1138,7 +1145,8 @@ export class GameScene extends Phaser.Scene {
     const overlay = this.add.container(0, 0, [dim, panel, label, sub]).setDepth(1600).setScrollFactor(0);
 
     this.time.delayedCall(700, () => {
-      this.player.setPosition(transition.destinationSpawn.x, transition.destinationSpawn.y);
+      const destinationY = this.sideScroll ? this.sideMetrics?.walkY ?? transition.destinationSpawn.y : transition.destinationSpawn.y;
+      this.player.setPosition(transition.destinationSpawn.x, destinationY);
       this.currentFloor = transition.toFloor;
       this.hud.setFloor(this.getFloorLabel(this.currentFloor));
       this.stairNoticeShown = false;

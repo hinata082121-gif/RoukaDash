@@ -73,3 +73,26 @@ export const SIDE_VISUAL = {
   studentScaleClassroomStanding: 1.02,
   studentScaleClassroomSitting: 0.92
 };
+
+export const SIDE_LAYOUT = {
+  designWidth: 432,
+  designHeight: 768,
+  pixelsPerMeter: 96,
+  depthScale: 0.65,
+  classroom: {
+    widthM: 8.0,
+    depthM: 8.0,
+    ceilingHeightM: 2.8,
+    sillHeightM: 0.9,
+    transomHeightM: 0.4
+  },
+  corridor: {
+    widthM: 2.3,
+    backLineRatio: 0.58,
+    walkLineRatio: 0.83
+  },
+  openings: {
+    doorPairWidthM: 1.7,
+    windowBandWidthM: 4.6
+  }
+};

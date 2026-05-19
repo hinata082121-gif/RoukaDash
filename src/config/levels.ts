@@ -199,16 +199,15 @@ const level5Map: LevelMapConfig = {
 };
 
 const sideLevel1: SideScrollConfig = {
-  worldWidth: 1060,
+  worldWidth: 1250,
   floorY: SIDE_VISUAL.playerLaneY,
   startX: 82,
   goalX: 960,
   initialFloor: 1,
   goalFloor: 1,
   backgroundRooms: [
-    { x: 70, width: 250, floor: 1, label: '1-1', kind: 'classroom' },
-    { x: 355, width: 250, floor: 1, label: '1-2', kind: 'classroom' },
-    { x: 750, width: 245, floor: 1, label: '玄関', kind: 'storage' }
+    { x: 70, width: 640, floor: 1, label: '1-1', kind: 'classroom' },
+    { x: 750, width: 420, floor: 1, label: '玄関', kind: 'storage' }
   ],
   students: [
     { id: 'l1-s1', x: 250, floor: 1, layer: 'hallway', color: 0x4f9ad8 },
@@ -232,16 +231,15 @@ const sideLevel1: SideScrollConfig = {
 };
 
 const sideLevel2: SideScrollConfig = {
-  worldWidth: 1240,
+  worldWidth: 1450,
   floorY: SIDE_VISUAL.playerLaneY,
   startX: 82,
   goalX: 1140,
   initialFloor: 2,
   goalFloor: 2,
   backgroundRooms: [
-    { x: 60, width: 270, floor: 2, label: '理科室', kind: 'science' },
-    { x: 375, width: 220, floor: 2, label: '準備室', kind: 'storage' },
-    { x: 675, width: 260, floor: 2, label: '2-1', kind: 'classroom' }
+    { x: 60, width: 640, floor: 2, label: '理科室', kind: 'science' },
+    { x: 735, width: 640, floor: 2, label: '2-1', kind: 'classroom' }
   ],
   students: [
     { id: 'l2-s1', x: 210, floor: 2, layer: 'classroom', color: 0x71c562 },
@@ -265,16 +263,15 @@ const sideLevel2: SideScrollConfig = {
 };
 
 const sideLevel3: SideScrollConfig = {
-  worldWidth: 1420,
+  worldWidth: 1620,
   floorY: SIDE_VISUAL.playerLaneY,
   startX: 84,
   goalX: 1320,
   initialFloor: 1,
   goalFloor: 1,
   backgroundRooms: [
-    { x: 70, width: 250, floor: 1, label: '保健室', kind: 'nurse' },
-    { x: 390, width: 220, floor: 1, label: '下駄箱', kind: 'storage' },
-    { x: 730, width: 270, floor: 1, label: '1-1', kind: 'classroom' }
+    { x: 70, width: 640, floor: 1, label: '保健室', kind: 'nurse' },
+    { x: 780, width: 640, floor: 1, label: '1-1', kind: 'classroom' }
   ],
   students: [
     { id: 'l3-s1', x: 310, floor: 1, layer: 'hallway', color: 0x4f9ad8 },
@@ -310,17 +307,16 @@ const sideLevel3: SideScrollConfig = {
 };
 
 const sideLevel4: SideScrollConfig = {
-  worldWidth: 1580,
+  worldWidth: 1940,
   floorY: SIDE_VISUAL.playerLaneY,
   startX: 84,
   goalX: 1490,
   initialFloor: 3,
   goalFloor: 2,
   backgroundRooms: [
-    { x: 70, width: 270, floor: 3, label: '図書室', kind: 'library' },
-    { x: 385, width: 235, floor: 3, label: '3-1', kind: 'classroom' },
-    { x: 930, width: 275, floor: 2, label: '職員室', kind: 'staff' },
-    { x: 1240, width: 230, floor: 2, label: '2-1', kind: 'classroom' }
+    { x: 70, width: 640, floor: 3, label: '図書室', kind: 'library' },
+    { x: 930, width: 640, floor: 2, label: '職員室', kind: 'staff' },
+    { x: 1240, width: 640, floor: 2, label: '2-1', kind: 'classroom' }
   ],
   students: [
     { id: 'l4-s1', x: 250, floor: 3, layer: 'classroom', color: 0x4f9ad8 },
@@ -366,19 +362,18 @@ const sideLevel4: SideScrollConfig = {
 };
 
 const sideLevel5: SideScrollConfig = {
-  worldWidth: 2160,
+  worldWidth: 2530,
   floorY: SIDE_VISUAL.playerLaneY,
   startX: 84,
   goalX: 2060,
   initialFloor: 3,
   goalFloor: 1,
   backgroundRooms: [
-    { x: 70, width: 270, floor: 3, label: '音楽室', kind: 'music' },
-    { x: 385, width: 235, floor: 3, label: '3-1', kind: 'classroom' },
-    { x: 800, width: 265, floor: 2, label: '2-1', kind: 'classroom' },
-    { x: 1140, width: 280, floor: 2, label: '職員室', kind: 'staff' },
-    { x: 1540, width: 260, floor: 1, label: '1-1', kind: 'classroom' },
-    { x: 1830, width: 260, floor: 1, label: '玄関', kind: 'storage' }
+    { x: 70, width: 640, floor: 3, label: '音楽室', kind: 'music' },
+    { x: 800, width: 640, floor: 2, label: '2-1', kind: 'classroom' },
+    { x: 1140, width: 640, floor: 2, label: '職員室', kind: 'staff' },
+    { x: 1540, width: 640, floor: 1, label: '1-1', kind: 'classroom' },
+    { x: 1830, width: 640, floor: 1, label: '玄関', kind: 'storage' }
   ],
   students: [
     { id: 'l5-s1', x: 260, floor: 3, layer: 'classroom', color: 0xf59e0b },
