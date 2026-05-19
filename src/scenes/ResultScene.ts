@@ -15,6 +15,7 @@ export class ResultScene extends Phaser.Scene {
   private theme!: ResultThemeConfig;
   private captureMode = false;
   private isSharing = false;
+  private actionsLocked = true;
   private actionContainer?: Phaser.GameObjects.Container;
   private shareOverlay?: ResultShareOverlay;
   private toastText?: Phaser.GameObjects.Text;
@@ -37,9 +38,11 @@ export class ResultScene extends Phaser.Scene {
     this.drawStatsAndBadges();
     this.drawFooterBrand();
     this.actionContainer = this.createActionButtons();
+    this.actionContainer.setAlpha(0.55);
     this.shareOverlay = new ResultShareOverlay(this, this.result, this.theme);
     this.runEntryAnimation(title);
     this.setCaptureMode(this.captureMode);
+    this.time.delayedCall(800, () => this.unlockActions());
     trackEvent('result_view', this.getAnalyticsParams());
   }
 
@@ -48,6 +51,11 @@ export class ResultScene extends Phaser.Scene {
     this.actionContainer?.setVisible(!enabled);
     this.shareOverlay?.setVisible(enabled);
     this.toastText?.setVisible(!enabled);
+  }
+
+  private unlockActions(): void {
+    this.actionsLocked = false;
+    this.actionContainer?.setAlpha(1);
   }
 
   private drawCardBackground(): void {
@@ -140,8 +148,8 @@ export class ResultScene extends Phaser.Scene {
   }
 
   private drawStatsAndBadges(): void {
-    const panelY = 632;
-    this.add.rectangle(GAME_WIDTH / 2, panelY, 342, 98, this.theme.colors.panel, 0.92).setStrokeStyle(4, this.theme.colors.accent, 0.96);
+    const panelY = 612;
+    this.add.rectangle(GAME_WIDTH / 2, panelY, 342, 86, this.theme.colors.panel, 0.92).setStrokeStyle(4, this.theme.colors.accent, 0.96);
 
     const timeLabel = this.result.resultKind === 'time_up' ? 'TIME 00.0s' : `TIME ${this.result.clearTime.toFixed(1)}s`;
     this.add
@@ -156,14 +164,14 @@ export class ResultScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const badges = (this.result.badges.length > 0 ? this.result.badges : this.theme.badges).slice(0, 3);
-    badges.forEach((badge, index) => this.createBadge(64 + index * 131, panelY + 22, badge, index));
+    badges.forEach((badge, index) => this.createBadge(64 + index * 131, panelY + 18, badge, index));
   }
 
   private drawFooterBrand(): void {
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 108, 'チャイムまでに帰れ！  #RoukaDash', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 34, 'チャイムまでに帰れ！  #RoukaDash', {
         fontFamily: THEME.font,
-        fontSize: '16px',
+        fontSize: '15px',
         color: '#ffffff',
         align: 'center',
         stroke: '#15101d',
@@ -174,26 +182,35 @@ export class ResultScene extends Phaser.Scene {
 
   private createActionButtons(): Phaser.GameObjects.Container {
     const items: Phaser.GameObjects.GameObject[] = [];
-    const primaryLabel = this.result.cleared && this.result.levelId < 5 ? '次へ' : 'もう一度';
-    const primaryAction =
-      this.result.cleared && this.result.levelId < 5
-        ? () => {
-            trackEvent('next_level_tap', this.getAnalyticsParams());
-            this.scene.start('GameScene', { levelId: this.result.levelId + 1 });
-          }
+    const isNextAvailable = this.result.cleared && this.result.levelId < 5;
+    const mainLabel = isNextAvailable ? '次へ' : this.result.cleared ? '校舎図へ' : 'もう一度';
+    const mainColor = isNextAvailable ? 0xfde68a : this.result.cleared ? 0xffffff : COLORS.goal;
+    const mainAction = isNextAvailable
+      ? () => {
+          trackEvent('next_level_tap', this.getAnalyticsParams());
+          this.scene.start('GameScene', { levelId: this.result.levelId + 1 });
+        }
+      : this.result.cleared
+        ? () => this.scene.start('SchoolMapScene')
         : () => {
             trackEvent('retry_tap', this.getAnalyticsParams());
             this.scene.start('GameScene', { levelId: this.result.levelId });
           };
-    items.push(
-      ...this.createButtonObjects(72, 748, 'リトライ', COLORS.goal, () => {
-        trackEvent('retry_tap', this.getAnalyticsParams());
-        this.scene.start('GameScene', { levelId: this.result.levelId });
-      })
-    );
-    items.push(...this.createButtonObjects(196, 748, '校舎図へ', 0xffffff, () => this.scene.start('SchoolMapScene')));
-    items.push(...this.createButtonObjects(318, 748, primaryLabel, 0xfde68a, primaryAction));
-    items.push(...this.createButtonObjects(GAME_WIDTH / 2, 814, 'スクショを共有', this.theme.colors.accent, () => void this.handleShare(), 314));
+
+    items.push(...this.createButtonObjects(GAME_WIDTH / 2, 692, mainLabel, mainColor, mainAction, 300));
+
+    if (this.result.cleared && this.result.levelId >= 5) {
+      items.push(
+        ...this.createButtonObjects(112, 752, 'もう一度', COLORS.goal, () => {
+          trackEvent('retry_tap', this.getAnalyticsParams());
+          this.scene.start('GameScene', { levelId: this.result.levelId });
+        }, 144)
+      );
+    } else {
+      items.push(...this.createButtonObjects(112, 752, '校舎図へ', 0xffffff, () => this.scene.start('SchoolMapScene'), 144));
+    }
+
+    items.push(...this.createButtonObjects(278, 752, 'スクショを共有', this.theme.colors.accent, () => void this.handleShare(), 154));
     return this.add.container(0, 0, items).setDepth(900);
   }
 
@@ -210,19 +227,28 @@ export class ResultScene extends Phaser.Scene {
         strokeThickness: color === 0xffffff || color === 0xfde68a ? 0 : 3
       })
       .setOrigin(0.5);
+    let armed = false;
     rect.on('pointerdown', () => {
+      if (this.actionsLocked || this.isSharing || this.captureMode) return;
+      armed = true;
       rect.setScale(0.97);
       text.setScale(0.97);
     });
     rect.on('pointerup', () => {
+      if (!armed) return;
+      armed = false;
       rect.setScale(1);
       text.setScale(1);
+      if (this.actionsLocked || this.isSharing || this.captureMode) return;
       onClick();
     });
-    rect.on('pointerout', () => {
+    const disarm = () => {
+      armed = false;
       rect.setScale(1);
       text.setScale(1);
-    });
+    };
+    rect.on('pointerout', disarm);
+    rect.on('pointerupoutside', disarm);
     return [shadow, rect, text];
   }
 

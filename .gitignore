@@ -28,3 +28,11 @@ pnpm-debug.log*
 Thumbs.db
 # local logs
 *.log
+
+# secrets
+# ICHI プロジェクト用の認証情報.txt
+*認証情報*.txt
+.env
+.env.local
+*.key
+*.pem
