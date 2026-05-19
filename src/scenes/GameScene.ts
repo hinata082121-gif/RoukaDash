@@ -8,7 +8,7 @@ import { Student } from '../entities/Student';
 import { Teacher } from '../entities/Teacher';
 import { SideScrollRenderer } from '../renderers/SideScrollRenderer';
 import type { LevelConfig, MapPropConfig, RectConfig, RoomConfig, StairTransitionConfig } from '../types/LevelTypes';
-import type { SideScrollConfig, SideScrollDirection, SideScrollMetrics, SideScrollTeacherConfig, SideScrollTeacherState } from '../types/SideScrollTypes';
+import type { PeekAnchor, SideScrollConfig, SideScrollDirection, SideScrollMetrics, SideScrollTeacherConfig, SideScrollTeacherState } from '../types/SideScrollTypes';
 import { Hud } from '../ui/Hud';
 import { InputManager } from '../systems/InputManager';
 import { LevelManager } from '../systems/LevelManager';
@@ -25,6 +25,7 @@ interface SideTeacherRuntime {
   body: Phaser.GameObjects.Container;
   vision: Phaser.GameObjects.Graphics;
   visualScale: number;
+  peekAnchor?: PeekAnchor;
   activeVision?: Phaser.Geom.Rectangle;
   warningVision?: Phaser.Geom.Rectangle;
 }
@@ -172,10 +173,8 @@ export class GameScene extends Phaser.Scene {
     this.player.setDepth(50);
     this.sideTeachers = side.teachers.map((teacher) => this.createSideTeacher(teacher, side));
     side.students.forEach((student) => {
-      const isClassroom = student.layer === 'classroom';
-      const y = isClassroom ? this.sideMetrics!.sillY + 12 : walkY - 20;
-      const sprite = new Student(this, student.x, y, student.color, isClassroom ? SIDE_VISUAL.studentScaleClassroomStanding : SIDE_VISUAL.studentScaleHallway, isClassroom ? 27 : 43);
-      if (isClassroom) sprite.setAlpha(0.86);
+      if (student.layer !== 'hallway') return;
+      new Student(this, student.x, walkY - 18, student.color, SIDE_VISUAL.studentScaleHallway, 43).setAlpha(0.9);
     });
 
     this.inputManager = new InputManager(this, 'horizontalButtons');
@@ -532,10 +531,11 @@ export class GameScene extends Phaser.Scene {
 
   private createSideTeacher(config: SideScrollTeacherConfig, side: SideScrollConfig): SideTeacherRuntime {
     const metrics = this.sideMetrics ?? buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT);
-    const classroomPeekY = metrics.windowBottomY - 8;
-    const y = config.type === 'classroom_watch' ? classroomPeekY : metrics.walkY - 22;
+    const peekAnchor = config.type === 'classroom_watch' ? SideScrollRenderer.getPeekAnchorForTeacher(side, config, metrics) : undefined;
+    const x = peekAnchor?.x ?? config.x;
+    const y = config.type === 'classroom_watch' ? peekAnchor?.y ?? metrics.windowBottomY - 8 : metrics.walkY - 22;
     const visualScale = config.type === 'classroom_watch' ? SIDE_VISUAL.teacherScaleClassroom : SIDE_VISUAL.teacherScaleHallway;
-    const body = this.add.container(config.x, y).setDepth(config.type === 'classroom_watch' ? 28 : 45);
+    const body = this.add.container(x, y).setDepth(config.type === 'classroom_watch' ? 28 : 45);
     const shadow = this.add.ellipse(0, 21, 34, 11, 0x000000, config.type === 'classroom_watch' ? 0.08 : 0.2);
     const suit = this.add.rectangle(0, 4, 28, 40, THEME.colors.teacherSuit, 1).setStrokeStyle(3, 0xffffff, 0.75);
     const shirt = this.add.rectangle(0, -3, 12, 16, 0xf8fafc, 0.92);
@@ -556,13 +556,14 @@ export class GameScene extends Phaser.Scene {
 
     return {
       config,
-      x: config.x,
+      x,
       direction: config.direction,
       state: config.type === 'classroom_watch' ? 'hidden' : 'active',
       elapsed: 0,
       body,
       vision: this.add.graphics().setDepth(24),
-      visualScale
+      visualScale,
+      peekAnchor
     };
   }
 
@@ -589,11 +590,14 @@ export class GameScene extends Phaser.Scene {
       }
       if (teacher.config.type === 'classroom_watch') {
         const metrics = this.sideMetrics ?? buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT);
-        const baseY = metrics.windowBottomY - 8;
+        const baseY = teacher.peekAnchor?.y ?? metrics.windowBottomY - 8;
         const isWatching = teacher.state === 'watching';
         const isWarning = teacher.state === 'warning';
-        teacher.body.setY(baseY + (teacher.state === 'hidden' ? 22 : isWarning ? 9 : 0));
-        teacher.body.setAlpha(isWatching ? 1 : isWarning ? 0.7 : 0.04);
+        teacher.x = teacher.peekAnchor?.x ?? teacher.x;
+        teacher.body.setX(teacher.x);
+        teacher.body.setY(baseY + (teacher.state === 'hidden' ? 18 : isWarning ? 7 : 0));
+        teacher.body.setScale(teacher.direction === 'left' ? -teacher.visualScale : teacher.visualScale, teacher.visualScale * (isWatching ? 1.02 : isWarning ? 0.9 : 0.68));
+        teacher.body.setAlpha(isWatching ? 1 : isWarning ? 0.74 : 0.08);
       } else {
         teacher.body.setAlpha(1);
       }
@@ -627,7 +631,8 @@ export class GameScene extends Phaser.Scene {
       teacher.state = teacher.state === 'hidden' ? 'warning' : teacher.state === 'warning' ? 'watching' : 'hidden';
     }
 
-    const rect = this.createSideVisionRect(teacher.x, this.sideMetrics?.walkY ?? side.floorY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
+    const metrics = this.sideMetrics ?? buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT);
+    const rect = this.createClassroomWatchVisionRect(teacher.x, teacher.peekAnchor?.y ?? metrics.windowBottomY, metrics.walkY, teacher.direction, teacher.config.visionWidth, teacher.config.visionHeight);
     if (teacher.state === 'warning') teacher.warningVision = rect;
     if (teacher.state === 'watching') teacher.activeVision = rect;
   }
@@ -635,6 +640,13 @@ export class GameScene extends Phaser.Scene {
   private createSideVisionRect(x: number, floorY: number, direction: SideScrollDirection, width: number, height: number): Phaser.Geom.Rectangle {
     const rectX = direction === 'right' ? x + 28 : x - width - 28;
     return new Phaser.Geom.Rectangle(rectX, floorY - height - 4, width, height + 8);
+  }
+
+  private createClassroomWatchVisionRect(x: number, anchorY: number, walkY: number, direction: SideScrollDirection, width: number, height: number): Phaser.Geom.Rectangle {
+    const rectX = direction === 'right' ? x + 22 : x - width - 22;
+    const top = Math.min(anchorY - 18, walkY - height - 4);
+    const rectHeight = Math.max(height + 8, walkY - top - 12);
+    return new Phaser.Geom.Rectangle(rectX, top, width, rectHeight);
   }
 
   private drawSideVision(g: Phaser.GameObjects.Graphics, rect: Phaser.Geom.Rectangle, color: number, alpha: number): void {

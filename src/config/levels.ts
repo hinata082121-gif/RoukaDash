@@ -211,7 +211,7 @@ const sideLevel1: SideScrollConfig = {
   ],
   students: [
     { id: 'l1-s1', x: 250, floor: 1, layer: 'hallway', color: 0x4f9ad8 },
-    { id: 'l1-s2', x: 460, floor: 1, layer: 'classroom', color: 0x71c562 },
+    { id: 'l1-s2', x: 460, floor: 1, layer: 'seated', color: 0x71c562 },
     { id: 'l1-s3', x: 790, floor: 1, layer: 'hallway', color: 0xf59e0b }
   ],
   teachers: [
@@ -220,6 +220,7 @@ const sideLevel1: SideScrollConfig = {
       type: 'classroom_watch',
       x: 470,
       floor: 1,
+      roomId: '1:1-1',
       direction: 'right',
       visionWidth: 176,
       visionHeight: 86,
@@ -242,9 +243,9 @@ const sideLevel2: SideScrollConfig = {
     { x: 735, width: 640, floor: 2, label: '2-1', kind: 'classroom' }
   ],
   students: [
-    { id: 'l2-s1', x: 210, floor: 2, layer: 'classroom', color: 0x71c562 },
+    { id: 'l2-s1', x: 210, floor: 2, layer: 'seated', color: 0x71c562 },
     { id: 'l2-s2', x: 510, floor: 2, layer: 'hallway', color: 0x4f9ad8 },
-    { id: 'l2-s3', x: 820, floor: 2, layer: 'classroom', color: 0xf59e0b }
+    { id: 'l2-s3', x: 820, floor: 2, layer: 'seated', color: 0xf59e0b }
   ],
   teachers: [
     {
@@ -275,7 +276,7 @@ const sideLevel3: SideScrollConfig = {
   ],
   students: [
     { id: 'l3-s1', x: 310, floor: 1, layer: 'hallway', color: 0x4f9ad8 },
-    { id: 'l3-s2', x: 560, floor: 1, layer: 'classroom', color: 0xf59e0b },
+    { id: 'l3-s2', x: 560, floor: 1, layer: 'seated', color: 0xf59e0b },
     { id: 'l3-s3', x: 980, floor: 1, layer: 'hallway', color: 0x71c562 }
   ],
   teachers: [
@@ -296,6 +297,7 @@ const sideLevel3: SideScrollConfig = {
       type: 'classroom_watch',
       x: 900,
       floor: 1,
+      roomId: '1:1-1',
       direction: 'left',
       visionWidth: 192,
       visionHeight: 86,
@@ -319,7 +321,7 @@ const sideLevel4: SideScrollConfig = {
     { x: 1240, width: 640, floor: 2, label: '2-1', kind: 'classroom' }
   ],
   students: [
-    { id: 'l4-s1', x: 250, floor: 3, layer: 'classroom', color: 0x4f9ad8 },
+    { id: 'l4-s1', x: 250, floor: 3, layer: 'seated', color: 0x4f9ad8 },
     { id: 'l4-s2', x: 530, floor: 3, layer: 'hallway', color: 0xf59e0b },
     { id: 'l4-s3', x: 1180, floor: 2, layer: 'hallway', color: 0x71c562 }
   ],
@@ -376,10 +378,10 @@ const sideLevel5: SideScrollConfig = {
     { x: 1830, width: 640, floor: 1, label: '玄関', kind: 'storage' }
   ],
   students: [
-    { id: 'l5-s1', x: 260, floor: 3, layer: 'classroom', color: 0xf59e0b },
+    { id: 'l5-s1', x: 260, floor: 3, layer: 'seated', color: 0xf59e0b },
     { id: 'l5-s2', x: 560, floor: 3, layer: 'hallway', color: 0x4f9ad8 },
     { id: 'l5-s3', x: 1020, floor: 2, layer: 'hallway', color: 0x71c562 },
-    { id: 'l5-s4', x: 1320, floor: 2, layer: 'classroom', color: 0xf59e0b },
+    { id: 'l5-s4', x: 1320, floor: 2, layer: 'seated', color: 0xf59e0b },
     { id: 'l5-s5', x: 1740, floor: 1, layer: 'hallway', color: 0x4f9ad8 }
   ],
   teachers: [
@@ -388,6 +390,7 @@ const sideLevel5: SideScrollConfig = {
       type: 'classroom_watch',
       x: 260,
       floor: 3,
+      roomId: '3:音楽室',
       direction: 'right',
       visionWidth: 184,
       visionHeight: 86,
@@ -421,6 +424,7 @@ const sideLevel5: SideScrollConfig = {
       type: 'classroom_watch',
       x: 1880,
       floor: 1,
+      roomId: '1:1-1',
       direction: 'left',
       visionWidth: 178,
       visionHeight: 86,

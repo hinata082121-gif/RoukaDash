@@ -7,6 +7,7 @@ import type {
   PeekAnchor,
   SideScrollConfig,
   SideScrollMetrics,
+  SideScrollTeacherConfig,
   SideScrollRoomConfig
 } from '../types/SideScrollTypes';
 import { buildSideScrollMetrics } from '../utils/sideScrollMetrics';
@@ -17,6 +18,86 @@ export class SideScrollRenderer {
   static render(scene: Phaser.Scene, side: SideScrollConfig, metrics = buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT)): void {
     const renderer = new SideScrollRenderer(scene, side, metrics);
     renderer.render();
+  }
+
+  static getRoomId(room: SideScrollRoomConfig): string {
+    return `${room.floor}:${room.label}`;
+  }
+
+  static getPeekAnchors(side: SideScrollConfig, metrics = buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT)): PeekAnchor[] {
+    return side.backgroundRooms.flatMap((room) => {
+      const roomId = SideScrollRenderer.getRoomId(room);
+      const windowRect = SideScrollRenderer.getWindowRectForRoom(room, metrics);
+      const leftX = windowRect.x + windowRect.width * 0.22;
+      const rightX = windowRect.x + windowRect.width * 0.78;
+      const y = windowRect.y + windowRect.height * 0.68;
+      const maskRect = SideScrollRenderer.toRectObject(windowRect);
+      return [
+        { id: `${roomId}:left:right`, roomId, x: leftX, y, direction: 'right', maskRect },
+        { id: `${roomId}:left:left`, roomId, x: leftX, y, direction: 'left', maskRect },
+        { id: `${roomId}:right:right`, roomId, x: rightX, y, direction: 'right', maskRect },
+        { id: `${roomId}:right:left`, roomId, x: rightX, y, direction: 'left', maskRect }
+      ];
+    });
+  }
+
+  static getPeekAnchorForTeacher(side: SideScrollConfig, teacher: SideScrollTeacherConfig, metrics = buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT)): PeekAnchor | undefined {
+    const anchors = SideScrollRenderer.getPeekAnchors(side, metrics);
+    const room = SideScrollRenderer.findRoomForTeacher(side, teacher);
+    const roomId = teacher.roomId ?? (room ? SideScrollRenderer.getRoomId(room) : undefined);
+    if (teacher.peekAnchorId) return anchors.find((anchor) => anchor.id === teacher.peekAnchorId);
+    const candidates = anchors.filter((anchor) => anchor.roomId === roomId && anchor.direction === teacher.direction);
+    return (
+      candidates.sort((a, b) => Math.abs(a.x - teacher.x) - Math.abs(b.x - teacher.x))[0] ??
+      anchors.find((anchor) => anchor.roomId === roomId) ??
+      anchors.find((anchor) => anchor.direction === teacher.direction && anchor.roomId.startsWith(`${teacher.floor}:`))
+    );
+  }
+
+  static getSeatAnchors(side: SideScrollConfig, metrics = buildSideScrollMetrics(GAME_WIDTH, GAME_HEIGHT, SIDE_LAYOUT), roomId?: string): ClassroomSeatAnchor[] {
+    const rooms = roomId ? side.backgroundRooms.filter((room) => SideScrollRenderer.getRoomId(room) === roomId) : side.backgroundRooms;
+    return rooms.flatMap((room) => SideScrollRenderer.getSeatAnchorsForRoom(room, metrics));
+  }
+
+  private static findRoomForTeacher(side: SideScrollConfig, teacher: SideScrollTeacherConfig): SideScrollRoomConfig | undefined {
+    if (teacher.roomId) return side.backgroundRooms.find((room) => SideScrollRenderer.getRoomId(room) === teacher.roomId);
+    return (
+      side.backgroundRooms.find((room) => room.floor === teacher.floor && teacher.x >= room.x && teacher.x <= room.x + Math.max(room.width, 640)) ??
+      side.backgroundRooms.find((room) => room.floor === teacher.floor)
+    );
+  }
+
+  private static getFacadeWidthForRoom(room: SideScrollRoomConfig, metrics: SideScrollMetrics): number {
+    const compressedModuleWidth = Math.min(metrics.classroomModuleWidthPx, 640);
+    return Math.max(room.width, compressedModuleWidth);
+  }
+
+  private static getWindowRectForRoom(room: SideScrollRoomConfig, metrics: SideScrollMetrics): Phaser.Geom.Rectangle {
+    const width = SideScrollRenderer.getFacadeWidthForRoom(room, metrics);
+    const roomY = metrics.transomTopY;
+    const windowOffsetY = metrics.windowTopY - metrics.transomTopY;
+    const windowHeight = metrics.windowBottomY - metrics.windowTopY;
+    const doorWidth = Phaser.Math.Clamp(metrics.doorPairWidthPx, 154, 173);
+    const doorX = room.x + width - doorWidth - 18;
+    const visibleWidth = Math.min(Math.max(360, metrics.windowBandWidthPx), Math.max(84, doorX - room.x - 34));
+    return new Phaser.Geom.Rectangle(room.x + 18, roomY + windowOffsetY, visibleWidth, windowHeight);
+  }
+
+  private static getSeatAnchorsForRoom(room: SideScrollRoomConfig, metrics: SideScrollMetrics): ClassroomSeatAnchor[] {
+    const anchors: ClassroomSeatAnchor[] = [];
+    const windowRect = SideScrollRenderer.getWindowRectForRoom(room, metrics);
+    const roomId = SideScrollRenderer.getRoomId(room);
+    const yRows = [windowRect.y + windowRect.height * 0.62, windowRect.y + windowRect.height * 0.82];
+    for (let row = 0; row < yRows.length; row += 1) {
+      for (let x = windowRect.x + 92; x < windowRect.x + windowRect.width - 92; x += 96) {
+        anchors.push({ roomId, x, y: yRows[row], scale: row === 0 ? 0.9 : 0.96, row });
+      }
+    }
+    return anchors;
+  }
+
+  private static toRectObject(rect: Phaser.Geom.Rectangle): PeekAnchor['maskRect'] {
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
   }
 
   private readonly roomY: number;
@@ -207,7 +288,7 @@ export class SideScrollRenderer {
       this.drawShoeBoxes(g, x + 38, this.metrics.windowTopY + 6, Math.max(8, Math.floor((width - 90) / 28)));
     } else {
       this.drawClassroomDesks(g, x, y, width);
-      const seatAnchors = this.getSeatAnchors(room).slice(0, 3);
+      const seatAnchors = this.getSeatAnchorsForRoom(room).slice(0, 3);
       seatAnchors.forEach((anchor, index) => this.drawSeatedStudent(g, anchor.x, anchor.y, index % 2 === 0 ? 0x4f9ad8 : 0xf59e0b));
       this.drawStandingStudent(g, x + 286, this.metrics.sillY - 8, 0x71c562, 0.78);
       this.drawTeacherDesk(g, x + width - 150, this.metrics.sillY - 16);
@@ -665,35 +746,8 @@ export class SideScrollRenderer {
     return new Phaser.Geom.Rectangle(x + 18, this.roomY + this.windowOffsetY, visibleWidth, this.windowHeight);
   }
 
-  private getPeekAnchors(): PeekAnchor[] {
-    return this.side.backgroundRooms.map((room) => {
-      const windowRect = this.getWindowRect(room);
-      return {
-        roomId: `${room.floor}-${room.label}-${room.x}`,
-        x: windowRect.x + windowRect.width - 28,
-        y: windowRect.y + windowRect.height * 0.58,
-        direction: 'right',
-        maskRect: {
-          x: windowRect.x,
-          y: windowRect.y,
-          width: windowRect.width,
-          height: windowRect.height
-        }
-      };
-    });
-  }
-
-  private getSeatAnchors(room: SideScrollRoomConfig): ClassroomSeatAnchor[] {
-    const anchors: ClassroomSeatAnchor[] = [];
-    const windowRect = this.getWindowRect(room);
-    const roomId = `${room.floor}-${room.label}-${room.x}`;
-    const yRows = [windowRect.y + windowRect.height * 0.62, windowRect.y + windowRect.height * 0.82];
-    for (let row = 0; row < yRows.length; row += 1) {
-      for (let x = windowRect.x + 92; x < windowRect.x + windowRect.width - 92; x += 96) {
-        anchors.push({ roomId, x, y: yRows[row], scale: row === 0 ? 0.9 : 0.96, row });
-      }
-    }
-    return anchors;
+  private getSeatAnchorsForRoom(room: SideScrollRoomConfig): ClassroomSeatAnchor[] {
+    return SideScrollRenderer.getSeatAnchors(this.side, this.metrics, SideScrollRenderer.getRoomId(room));
   }
 
   private getRoomPalette(kind: RoomKind): RoomPalette {

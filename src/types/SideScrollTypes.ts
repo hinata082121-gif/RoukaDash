@@ -3,7 +3,7 @@ import type { RectConfig, RoomKind, StairTransitionConfig } from './LevelTypes';
 export type SideScrollTeacherKind = 'hallway_patrol' | 'hallway_static' | 'classroom_watch';
 export type SideScrollDirection = 'left' | 'right';
 export type SideScrollTeacherState = 'hidden' | 'warning' | 'watching' | 'active';
-export type StudentLayer = 'hallway' | 'classroom';
+export type StudentLayer = 'hallway' | 'classroom' | 'seated';
 
 export interface SideScrollLayoutConfig {
   designWidth: number;
@@ -50,6 +50,7 @@ export interface SideScrollMetrics {
 }
 
 export interface PeekAnchor {
+  id: string;
   roomId: string;
   x: number;
   y: number;
@@ -91,6 +92,8 @@ export interface SideScrollTeacherConfig {
   type: SideScrollTeacherKind;
   x: number;
   floor: number;
+  roomId?: string;
+  peekAnchorId?: string;
   direction: SideScrollDirection;
   visionWidth: number;
   visionHeight: number;
