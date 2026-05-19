@@ -2,8 +2,11 @@ import Phaser from 'phaser';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 import { RESULT_THEME, type ResultThemeConfig } from '../config/resultTheme';
 import { THEME } from '../config/visualTheme';
+import { ScreenshotService } from '../services/ScreenshotService';
+import { ShareService } from '../services/ShareService';
 import type { GameResultData, ResultKind } from '../types/LevelTypes';
 import { ResultShareOverlay } from '../ui/ResultShareOverlay';
+import { trackEvent } from '../utils/analytics';
 
 type ResultSceneInitData = GameResultData & { captureMode?: boolean };
 
@@ -11,9 +14,10 @@ export class ResultScene extends Phaser.Scene {
   private result!: GameResultData;
   private theme!: ResultThemeConfig;
   private captureMode = false;
+  private isSharing = false;
   private actionContainer?: Phaser.GameObjects.Container;
   private shareOverlay?: ResultShareOverlay;
-  private captureHint?: Phaser.GameObjects.Text;
+  private toastText?: Phaser.GameObjects.Text;
 
   constructor() {
     super('ResultScene');
@@ -36,28 +40,14 @@ export class ResultScene extends Phaser.Scene {
     this.shareOverlay = new ResultShareOverlay(this, this.result, this.theme);
     this.runEntryAnimation(title);
     this.setCaptureMode(this.captureMode);
+    trackEvent('result_view', this.getAnalyticsParams());
   }
 
   setCaptureMode(enabled: boolean): void {
     this.captureMode = enabled;
     this.actionContainer?.setVisible(!enabled);
     this.shareOverlay?.setVisible(enabled);
-    if (enabled) {
-      this.captureHint = this.add
-        .text(GAME_WIDTH / 2, GAME_HEIGHT - 118, 'タップで通常表示へ', {
-          fontFamily: THEME.font,
-          fontSize: '15px',
-          color: '#ffffff',
-          backgroundColor: '#15101d',
-          padding: { x: 8, y: 4 }
-        })
-        .setOrigin(0.5)
-        .setDepth(980);
-      this.input.once('pointerup', () => this.setCaptureMode(false));
-    } else {
-      this.captureHint?.destroy();
-      this.captureHint = undefined;
-    }
+    this.toastText?.setVisible(!enabled);
   }
 
   private drawCardBackground(): void {
@@ -185,11 +175,25 @@ export class ResultScene extends Phaser.Scene {
   private createActionButtons(): Phaser.GameObjects.Container {
     const items: Phaser.GameObjects.GameObject[] = [];
     const primaryLabel = this.result.cleared && this.result.levelId < 5 ? '次へ' : 'もう一度';
-    const primaryAction = this.result.cleared && this.result.levelId < 5 ? () => this.scene.start('GameScene', { levelId: this.result.levelId + 1 }) : () => this.scene.start('GameScene', { levelId: this.result.levelId });
-    items.push(...this.createButtonObjects(72, 748, 'リトライ', COLORS.goal, () => this.scene.start('GameScene', { levelId: this.result.levelId })));
+    const primaryAction =
+      this.result.cleared && this.result.levelId < 5
+        ? () => {
+            trackEvent('next_level_tap', this.getAnalyticsParams());
+            this.scene.start('GameScene', { levelId: this.result.levelId + 1 });
+          }
+        : () => {
+            trackEvent('retry_tap', this.getAnalyticsParams());
+            this.scene.start('GameScene', { levelId: this.result.levelId });
+          };
+    items.push(
+      ...this.createButtonObjects(72, 748, 'リトライ', COLORS.goal, () => {
+        trackEvent('retry_tap', this.getAnalyticsParams());
+        this.scene.start('GameScene', { levelId: this.result.levelId });
+      })
+    );
     items.push(...this.createButtonObjects(196, 748, '校舎図へ', 0xffffff, () => this.scene.start('SchoolMapScene')));
     items.push(...this.createButtonObjects(318, 748, primaryLabel, 0xfde68a, primaryAction));
-    items.push(...this.createButtonObjects(GAME_WIDTH / 2, 814, '共有する', this.theme.colors.accent, () => this.setCaptureMode(true), 314));
+    items.push(...this.createButtonObjects(GAME_WIDTH / 2, 814, 'スクショを共有', this.theme.colors.accent, () => void this.handleShare(), 314));
     return this.add.container(0, 0, items).setDepth(900);
   }
 
@@ -420,5 +424,100 @@ export class ResultScene extends Phaser.Scene {
     if (this.result.resultKind === 'clear') {
       this.tweens.add({ targets: headline, angle: { from: -2, to: 0 }, duration: 260 });
     }
+  }
+
+  private async handleShare(): Promise<void> {
+    if (this.isSharing) return;
+    this.isSharing = true;
+    trackEvent('share_tap', this.getAnalyticsParams());
+    this.setCaptureMode(true);
+
+    try {
+      await this.waitForFrames(2);
+      const file = await ScreenshotService.captureCanvasAsFile(this.game.canvas, this.createScreenshotFilename());
+      const result = await ShareService.shareImage({
+        title: this.createShareTitle(),
+        text: this.result.shareText,
+        file
+      });
+
+      if (result.status === 'shared') {
+        trackEvent('share_success', this.getAnalyticsParams());
+        this.showToast('共有を開きました');
+      } else if (result.status === 'cancelled') {
+        trackEvent('share_cancel', this.getAnalyticsParams());
+        this.showToast('共有をキャンセルしました');
+      } else if (result.status === 'fallback_downloaded') {
+        trackEvent('share_fallback_save', this.getAnalyticsParams());
+        this.showToast(result.copied ? '画像を保存しました。投稿文もコピー済みです。' : '画像を保存しました。投稿文は画面下からコピーしてください。');
+      } else {
+        this.showToast('共有に失敗しました');
+      }
+    } catch (error) {
+      this.showToast('スクショ作成に失敗しました');
+      trackEvent('share_failed', { ...this.getAnalyticsParams(), error: error instanceof Error ? error.message : 'unknown' });
+    } finally {
+      this.setCaptureMode(false);
+      this.isSharing = false;
+    }
+  }
+
+  private createScreenshotFilename(): string {
+    return `roukadash-${this.result.resultKind}-lv${this.result.levelId}.png`;
+  }
+
+  private createShareTitle(): string {
+    if (this.result.resultKind === 'clear') return 'RoukaDash - ギリセーフ！';
+    if (this.result.resultKind === 'time_up') return 'RoukaDash - チャイム終了';
+    return 'RoukaDash - 見つかった！';
+  }
+
+  private waitForFrames(count: number): Promise<void> {
+    return new Promise((resolve) => {
+      const wait = (remaining: number) => {
+        if (remaining <= 0) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(() => wait(remaining - 1));
+      };
+      wait(count);
+    });
+  }
+
+  private showToast(message: string): void {
+    this.toastText?.destroy();
+    this.toastText = this.add
+      .text(GAME_WIDTH / 2, 704, message, {
+        fontFamily: THEME.font,
+        fontSize: message.length > 18 ? '14px' : '16px',
+        color: '#ffffff',
+        align: 'center',
+        backgroundColor: '#15101d',
+        padding: { x: 10, y: 7 },
+        wordWrap: { width: 330 }
+      })
+      .setOrigin(0.5)
+      .setDepth(1200)
+      .setScrollFactor(0);
+    this.tweens.add({
+      targets: this.toastText,
+      alpha: 0,
+      duration: 260,
+      delay: 2000,
+      onComplete: () => {
+        this.toastText?.destroy();
+        this.toastText = undefined;
+      }
+    });
+  }
+
+  private getAnalyticsParams(): Record<string, string | number> {
+    return {
+      result_kind: this.result.resultKind,
+      level_id: this.result.levelId,
+      clear_time: Number(this.result.clearTime.toFixed(1)),
+      dash_count: this.result.dashCount
+    };
   }
 }
