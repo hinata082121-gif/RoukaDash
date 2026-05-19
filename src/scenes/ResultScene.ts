@@ -15,11 +15,11 @@ export class ResultScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.cameras.main.setBackgroundColor(this.result.cleared ? 0x164e63 : 0x3f1d1d);
+    this.cameras.main.setBackgroundColor(this.getBackgroundColor());
     this.add.rectangle(GAME_WIDTH / 2, 246, 328, 284, THEME.colors.uiPanel, 0.88).setStrokeStyle(5, THEME.colors.uiBorder, 0.95);
 
     this.add
-      .text(GAME_WIDTH / 2, 146, this.result.cleared ? 'クリア！' : '失敗', {
+      .text(GAME_WIDTH / 2, 146, this.getHeadline(), {
         fontFamily: THEME.font,
         fontSize: '40px',
         color: '#ffffff',
@@ -54,7 +54,7 @@ export class ResultScene extends Phaser.Scene {
         .setOrigin(0.5);
     } else {
       this.add
-        .text(GAME_WIDTH / 2, 330, this.result.reason ?? 'もう一度挑戦しよう', {
+        .text(GAME_WIDTH / 2, 330, this.getReasonText(), {
           fontFamily: THEME.font,
           fontSize: '20px',
           color: '#fecaca',
@@ -110,5 +110,24 @@ export class ResultScene extends Phaser.Scene {
       rect.setScale(1);
       text.setScale(1);
     });
+  }
+
+  private getBackgroundColor(): number {
+    if (this.result.resultKind === 'clear') return 0x164e63;
+    if (this.result.resultKind === 'time_up') return 0x3b2f1d;
+    return 0x3f1d1d;
+  }
+
+  private getHeadline(): string {
+    if (this.result.resultKind === 'clear') return 'クリア！';
+    if (this.result.resultKind === 'time_up') return '時間切れ';
+    return '見つかった！';
+  }
+
+  private getReasonText(): string {
+    if (this.result.reason) return this.result.reason;
+    if (this.result.resultKind === 'time_up') return 'チャイムに間に合わなかった！';
+    if (this.result.resultKind === 'caught_dash') return '先生の前で走ってしまった！';
+    return 'もう一度挑戦しよう';
   }
 }

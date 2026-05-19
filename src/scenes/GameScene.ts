@@ -7,7 +7,7 @@ import { Player } from '../entities/Player';
 import { Student } from '../entities/Student';
 import { Teacher } from '../entities/Teacher';
 import { SideScrollRenderer } from '../renderers/SideScrollRenderer';
-import type { LevelConfig, MapPropConfig, RectConfig, RoomConfig, StairTransitionConfig } from '../types/LevelTypes';
+import type { GameResultData, LevelConfig, MapPropConfig, RectConfig, ResultKind, RoomConfig, StairTransitionConfig } from '../types/LevelTypes';
 import type { PeekAnchor, SideScrollConfig, SideScrollDirection, SideScrollMetrics, SideScrollTeacherConfig, SideScrollTeacherState } from '../types/SideScrollTypes';
 import { Hud } from '../ui/Hud';
 import { InputManager } from '../systems/InputManager';
@@ -143,17 +143,17 @@ export class GameScene extends Phaser.Scene {
     this.updateDebugOverlay(input.isDashing, isInTeacherVision, input.inputSource);
 
     if (this.canClearOnCurrentFloor() && this.goal.contains(position.x, position.y)) {
-      this.finish(true);
+      this.finish('clear');
       return;
     }
 
     if (input.isDashing && isInTeacherVision) {
-      this.finish(false, '先生の前で走ってしまった！');
+      this.finish('caught_dash');
       return;
     }
 
     if (this.remainingMs <= 0) {
-      this.finish(false, 'チャイムに間に合わなかった！');
+      this.finish('time_up');
       return;
     }
 
@@ -222,17 +222,17 @@ export class GameScene extends Phaser.Scene {
     this.updateDebugOverlay(input.isDashing, isInTeacherVision, input.inputSource);
 
     if (this.currentFloor === side.goalFloor && position.x >= side.goalX) {
-      this.finish(true);
+      this.finish('clear');
       return;
     }
 
     if (input.isDashing && isInTeacherVision) {
-      this.finish(false, '先生の前で走ってしまった！');
+      this.finish('caught_dash');
       return;
     }
 
     if (this.remainingMs <= 0) {
-      this.finish(false, 'チャイムに間に合わなかった！');
+      this.finish('time_up');
     }
   }
 
@@ -682,19 +682,76 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  private finish(cleared: boolean, reason?: string): void {
+  private finish(resultKind: ResultKind): void {
     this.finished = true;
+    const cleared = resultKind === 'clear';
     if (cleared) {
       ProgressManager.clearLevel(this.level.id);
     }
 
-    this.scene.start('ResultScene', {
+    this.scene.start('ResultScene', this.createResultData(resultKind));
+  }
+
+  private createResultData(resultKind: ResultKind): GameResultData {
+    const cleared = resultKind === 'clear';
+    const presentation = this.getResultPresentation(resultKind);
+    return {
       levelId: this.level.id,
+      levelName: this.level.name,
       cleared,
       clearTime: this.level.timeLimit - Math.max(0, this.remainingMs / 1000),
       dashCount: this.dashCount,
-      reason
-    });
+      reason: presentation.reason,
+      resultKind,
+      shareText: presentation.shareText,
+      shareTitle: presentation.shareTitle,
+      badges: presentation.badges,
+      captureSeed: {
+        floor: this.currentFloor,
+        teacherSide: resultKind === 'caught_dash' ? this.getCaughtTeacherSide() : undefined,
+        remainingMs: Math.max(0, Math.round(this.remainingMs)),
+        variantId: 'bold-a'
+      }
+    };
+  }
+
+  private getResultPresentation(resultKind: ResultKind): Pick<GameResultData, 'reason' | 'shareText' | 'shareTitle' | 'badges'> {
+    if (resultKind === 'clear') {
+      return {
+        reason: '着席成功！',
+        shareTitle: 'ギリセーフ！',
+        shareText: 'ギリセーフ！先生の視線をかわして着席成功。 #RoukaDash #着席成功',
+        badges: ['ギリセーフ', '着席成功', '先生回避']
+      };
+    }
+    if (resultKind === 'time_up') {
+      return {
+        reason: 'チャイムに間に合わなかった！',
+        shareTitle: 'チャイム敗北',
+        shareText: 'あと少しで間に合わなかった…チャイム敗北。 #RoukaDash #あと一歩',
+        badges: ['チャイム敗北', 'あと一歩', '時間切れ']
+      };
+    }
+    return {
+      reason: '先生の前で走ってしまった！',
+      shareTitle: '先生にバレた',
+      shareText: '廊下ダッシュ、先生にバレた。 #RoukaDash #先生にバレた',
+      badges: ['先生激怒', '廊下ダッシュ', '即バレ']
+    };
+  }
+
+  private getCaughtTeacherSide(): 'left' | 'right' {
+    const playerX = this.player?.x ?? GAME_WIDTH / 2;
+    const activeSideTeacher = this.sideTeachers.find((teacher) => teacher.config.floor === this.currentFloor && teacher.activeVision);
+    if (activeSideTeacher?.activeVision) {
+      return activeSideTeacher.activeVision.centerX < playerX ? 'left' : 'right';
+    }
+    return this.teachers.some((teacher) => {
+      const rect = teacher.getVisionRect();
+      return rect ? rect.centerX < playerX : false;
+    })
+      ? 'left'
+      : 'right';
   }
 
   private togglePause(): void {

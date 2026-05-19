@@ -65,10 +65,23 @@ export interface LevelConfig {
   unlockedMapArea: string;
 }
 
+export type ResultKind = 'clear' | 'time_up' | 'caught_dash';
+
 export interface GameResultData {
   levelId: number;
+  levelName?: string;
   cleared: boolean;
   clearTime: number;
   dashCount: number;
   reason?: string;
+  resultKind: ResultKind;
+  shareText: string;
+  shareTitle: string;
+  badges: string[];
+  captureSeed?: {
+    floor?: number;
+    teacherSide?: 'left' | 'right';
+    remainingMs?: number;
+    variantId?: 'bold-a' | 'bold-b' | 'bold-c';
+  };
 }
