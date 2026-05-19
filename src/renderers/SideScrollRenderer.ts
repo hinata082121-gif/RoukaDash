@@ -2,7 +2,13 @@ import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 import { SIDE_LAYOUT, SIDE_VISUAL, THEME } from '../config/visualTheme';
 import type { RectConfig, RoomKind } from '../types/LevelTypes';
-import type { SideScrollConfig, SideScrollMetrics, SideScrollRoomConfig } from '../types/SideScrollTypes';
+import type {
+  ClassroomSeatAnchor,
+  PeekAnchor,
+  SideScrollConfig,
+  SideScrollMetrics,
+  SideScrollRoomConfig
+} from '../types/SideScrollTypes';
 import { buildSideScrollMetrics } from '../utils/sideScrollMetrics';
 
 type RoomPalette = { wall: number; dark: number; floor: number; accent: number };
@@ -34,18 +40,17 @@ export class SideScrollRenderer {
   private render(): void {
     const g = this.scene.add.graphics().setDepth(1);
     const windowG = this.scene.add.graphics().setDepth(30);
-    this.drawBackgroundWall(g);
+    this.buildMetrics();
+    this.drawBackWallAndCeiling(g);
+    this.drawRoomFacadeModules(g);
     for (const room of this.side.backgroundRooms) {
-      this.drawClassroomBack(g, room);
+      this.drawClassroomInterior(room);
     }
     for (const room of this.side.backgroundRooms) {
-      this.drawClassroomMid(g, room);
+      this.drawClassroomWindowFrames(windowG, room);
     }
-    for (const room of this.side.backgroundRooms) {
-      this.drawWindowFront(windowG, room);
-    }
-    this.drawCorridorBack(g);
-    this.drawFloor(g);
+    this.drawCorridorProps(g);
+    this.drawPerspectiveFloor(g);
     this.drawFloorAccents(g);
     for (const transition of this.side.stairTransitions ?? []) {
       this.drawStairs(g, transition.trigger, transition.toFloor);
@@ -60,6 +65,77 @@ export class SideScrollRenderer {
         padding: { x: 7, y: 3 }
       })
       .setDepth(8);
+  }
+
+  private buildMetrics(): SideScrollMetrics {
+    return this.metrics;
+  }
+
+  private drawBackWallAndCeiling(g: Phaser.GameObjects.Graphics): void {
+    this.drawBackgroundWall(g);
+  }
+
+  private drawRoomFacadeModules(g: Phaser.GameObjects.Graphics): void {
+    for (const room of this.side.backgroundRooms) {
+      this.drawRoomFacadeModule(g, room);
+    }
+  }
+
+  private drawRoomFacadeModule(g: Phaser.GameObjects.Graphics, room: SideScrollRoomConfig): void {
+    const palette = this.getRoomPalette(room.kind);
+    const x = room.x;
+    const y = this.roomY;
+    const width = this.getFacadeWidth(room);
+    const height = this.roomHeight;
+
+    g.fillStyle(palette.wall, 1);
+    g.fillRect(x, y, width, height);
+    g.fillStyle(0xe6d1a8, 1);
+    g.fillRect(x, this.metrics.sillY, width, height - (this.metrics.sillY - y));
+    g.fillStyle(0xd6b881, 1);
+    g.fillRect(x, this.metrics.sillY + 22, width, 16);
+
+    g.fillStyle(0xb08b5a, 1);
+    g.fillRect(x, y, 14, height);
+    g.fillRect(x + width - 14, y, 14, height);
+    g.fillStyle(0xf7e6bf, 1);
+    g.fillRect(x + 14, y, width - 28, this.metrics.windowTopY - y - 8);
+    g.fillStyle(0xb9dbe7, 0.5);
+    g.fillRect(x + 18, this.metrics.transomTopY + 6, width - 36, Math.max(14, this.metrics.windowTopY - this.metrics.transomTopY - 18));
+
+    g.lineStyle(3, THEME.colors.mapBorder, 0.48);
+    g.strokeRect(x, y, width, height);
+    g.lineStyle(2, 0xffffff, 0.3);
+    g.lineBetween(x + 8, y + 7, x + width - 8, y + 7);
+    g.lineStyle(3, 0xa88b62, 0.48);
+    g.lineBetween(x + 2, this.metrics.sillY, x + width - 2, this.metrics.sillY);
+
+    this.drawRoomPlate(room);
+  }
+
+  private drawClassroomInterior(room: SideScrollRoomConfig): void {
+    const interiorG = this.scene.add.graphics().setDepth(4);
+    const windowRect = this.getWindowRect(room);
+    const maskShape = this.scene.make.graphics({ x: 0, y: 0 });
+    maskShape.fillStyle(0xffffff, 1);
+    maskShape.fillRect(windowRect.x, windowRect.y, windowRect.width, windowRect.height);
+    interiorG.setMask(maskShape.createGeometryMask());
+
+    const width = this.getFacadeWidth(room);
+    this.drawBackWallFeature(interiorG, room.x, this.roomY, width, this.roomHeight, room.kind);
+    this.drawClassroomMid(interiorG, room);
+  }
+
+  private drawClassroomWindowFrames(g: Phaser.GameObjects.Graphics, room: SideScrollRoomConfig): void {
+    this.drawWindowFront(g, room);
+  }
+
+  private drawCorridorProps(g: Phaser.GameObjects.Graphics): void {
+    this.drawCorridorBack(g);
+  }
+
+  private drawPerspectiveFloor(g: Phaser.GameObjects.Graphics): void {
+    this.drawFloor(g);
   }
 
   private drawBackgroundWall(g: Phaser.GameObjects.Graphics): void {
@@ -131,8 +207,8 @@ export class SideScrollRenderer {
       this.drawShoeBoxes(g, x + 38, this.metrics.windowTopY + 6, Math.max(8, Math.floor((width - 90) / 28)));
     } else {
       this.drawClassroomDesks(g, x, y, width);
-      this.drawSeatedStudent(g, x + 108, this.metrics.sillY + 12, 0x4f9ad8);
-      this.drawSeatedStudent(g, x + 194, this.metrics.sillY + 12, 0xf59e0b);
+      const seatAnchors = this.getSeatAnchors(room).slice(0, 3);
+      seatAnchors.forEach((anchor, index) => this.drawSeatedStudent(g, anchor.x, anchor.y, index % 2 === 0 ? 0x4f9ad8 : 0xf59e0b));
       this.drawStandingStudent(g, x + 286, this.metrics.sillY - 8, 0x71c562, 0.78);
       this.drawTeacherDesk(g, x + width - 150, this.metrics.sillY - 16);
     }
@@ -145,6 +221,7 @@ export class SideScrollRenderer {
     const height = this.roomHeight;
     const doorWidth = Phaser.Math.Clamp(this.metrics.doorPairWidthPx, 154, 173);
     const doorX = x + width - doorWidth - 18;
+    const windowRect = this.getWindowRect(room);
 
     g.fillStyle(THEME.colors.door, 1);
     g.fillRect(doorX, this.metrics.transomTopY + 50, doorWidth, height - 50);
@@ -158,25 +235,32 @@ export class SideScrollRenderer {
     g.fillRect(doorX + doorWidth / 2 - 8, this.metrics.sillY + 38, 5, 5);
     g.fillRect(doorX + doorWidth / 2 + 6, this.metrics.sillY + 38, 5, 5);
 
-    const visibleWidth = Math.min(Math.max(360, this.metrics.windowBandWidthPx), Math.max(84, doorX - x - 34));
+    const visibleWidth = windowRect.width;
     g.fillStyle(0xb9dbe7, 0.26);
-    g.fillRect(x + 18, y + this.windowOffsetY, visibleWidth, this.windowHeight);
+    g.fillRect(windowRect.x, windowRect.y, visibleWidth, windowRect.height);
     g.lineStyle(4, 0x35505a, 0.88);
-    g.strokeRect(x + 18, y + this.windowOffsetY, visibleWidth, this.windowHeight);
+    g.strokeRect(windowRect.x, windowRect.y, visibleWidth, windowRect.height);
     g.lineStyle(3, 0x35505a, 0.78);
-    g.lineBetween(x + 18, y + this.windowOffsetY + this.windowHeight / 2, x + visibleWidth + 18, y + this.windowOffsetY + this.windowHeight / 2);
-    for (let sashX = x + 72; sashX < x + visibleWidth + 8; sashX += 72) {
-      g.lineBetween(sashX, y + this.windowOffsetY + 2, sashX, y + this.windowOffsetY + this.windowHeight - 2);
+    g.lineBetween(windowRect.x, windowRect.y + windowRect.height / 2, windowRect.x + visibleWidth, windowRect.y + windowRect.height / 2);
+    for (let sashX = windowRect.x + 54; sashX < windowRect.x + visibleWidth - 8; sashX += 72) {
+      g.lineBetween(sashX, windowRect.y + 2, sashX, windowRect.y + windowRect.height - 2);
     }
 
     g.fillStyle(THEME.colors.curtain, 0.9);
-    g.fillRect(x + 20, y + this.windowOffsetY - 4, 10, this.windowHeight + 10);
-    g.fillRect(x + visibleWidth + 6, y + this.windowOffsetY - 4, 10, this.windowHeight + 10);
+    g.fillRect(windowRect.x + 2, windowRect.y - 4, 10, windowRect.height + 10);
+    g.fillRect(windowRect.x + visibleWidth - 12, windowRect.y - 4, 10, windowRect.height + 10);
     g.fillStyle(0xe8fbff, 0.62);
-    g.fillTriangle(x + 34, y + this.windowOffsetY + 10, x + 92, y + this.windowOffsetY + 10, x + 34, y + this.windowOffsetY + 42);
-    g.fillTriangle(x + 112, y + this.windowOffsetY + this.windowHeight - 36, x + 190, y + this.windowOffsetY + this.windowHeight - 36, x + 112, y + this.windowOffsetY + this.windowHeight - 8);
+    g.fillTriangle(windowRect.x + 16, windowRect.y + 10, windowRect.x + 74, windowRect.y + 10, windowRect.x + 16, windowRect.y + 42);
+    g.fillTriangle(
+      windowRect.x + 94,
+      windowRect.y + windowRect.height - 36,
+      windowRect.x + 172,
+      windowRect.y + windowRect.height - 36,
+      windowRect.x + 94,
+      windowRect.y + windowRect.height - 8
+    );
     g.fillStyle(0x2f2418, 0.18);
-    g.fillRect(x + 18, y + this.windowOffsetY + this.windowHeight - 8, visibleWidth, 8);
+    g.fillRect(windowRect.x, windowRect.y + windowRect.height - 8, visibleWidth, 8);
   }
 
   private drawCorridorBack(g: Phaser.GameObjects.Graphics): void {
@@ -570,6 +654,46 @@ export class SideScrollRenderer {
   private getFacadeWidth(room: SideScrollRoomConfig): number {
     const compressedModuleWidth = Math.min(this.metrics.classroomModuleWidthPx, 640);
     return Math.max(room.width, compressedModuleWidth);
+  }
+
+  private getWindowRect(room: SideScrollRoomConfig): Phaser.Geom.Rectangle {
+    const x = room.x;
+    const width = this.getFacadeWidth(room);
+    const doorWidth = Phaser.Math.Clamp(this.metrics.doorPairWidthPx, 154, 173);
+    const doorX = x + width - doorWidth - 18;
+    const visibleWidth = Math.min(Math.max(360, this.metrics.windowBandWidthPx), Math.max(84, doorX - x - 34));
+    return new Phaser.Geom.Rectangle(x + 18, this.roomY + this.windowOffsetY, visibleWidth, this.windowHeight);
+  }
+
+  private getPeekAnchors(): PeekAnchor[] {
+    return this.side.backgroundRooms.map((room) => {
+      const windowRect = this.getWindowRect(room);
+      return {
+        roomId: `${room.floor}-${room.label}-${room.x}`,
+        x: windowRect.x + windowRect.width - 28,
+        y: windowRect.y + windowRect.height * 0.58,
+        direction: 'right',
+        maskRect: {
+          x: windowRect.x,
+          y: windowRect.y,
+          width: windowRect.width,
+          height: windowRect.height
+        }
+      };
+    });
+  }
+
+  private getSeatAnchors(room: SideScrollRoomConfig): ClassroomSeatAnchor[] {
+    const anchors: ClassroomSeatAnchor[] = [];
+    const windowRect = this.getWindowRect(room);
+    const roomId = `${room.floor}-${room.label}-${room.x}`;
+    const yRows = [windowRect.y + windowRect.height * 0.62, windowRect.y + windowRect.height * 0.82];
+    for (let row = 0; row < yRows.length; row += 1) {
+      for (let x = windowRect.x + 92; x < windowRect.x + windowRect.width - 92; x += 96) {
+        anchors.push({ roomId, x, y: yRows[row], scale: row === 0 ? 0.9 : 0.96, row });
+      }
+    }
+    return anchors;
   }
 
   private getRoomPalette(kind: RoomKind): RoomPalette {
