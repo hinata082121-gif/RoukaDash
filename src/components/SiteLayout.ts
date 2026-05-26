@@ -46,10 +46,18 @@ export function SiteLayout(page: PageDefinition, currentPath: string): string {
         </article>
       </main>
       <footer class="site-footer">
-        <a href="/about" data-link>About</a>
-        <a href="/contact" data-link>Contact</a>
-        <a href="/privacy" data-link>Privacy</a>
-        <a href="/terms" data-link>Terms</a>
+        <div class="footer-links">
+          <a href="/" data-link>トップ</a>
+          <a href="/play" data-link>ゲームを遊ぶ</a>
+          <a href="/how-to-play" data-link>遊び方</a>
+          <a href="/strategy" data-link>攻略のコツ</a>
+          <a href="/school-rules" data-link>先生の視界</a>
+          <a href="/about" data-link>平成学校ゲームズ</a>
+          <a href="https://kyusyoku-okawari.vercel.app/" target="_blank" rel="noopener noreferrer">給食おかわり争奪戦</a>
+          <a href="/privacy" data-link>プライバシーポリシー</a>
+          <a href="/terms" data-link>利用規約</a>
+          <a href="/contact" data-link>お問い合わせ</a>
+        </div>
       </footer>
     </div>
   `;
